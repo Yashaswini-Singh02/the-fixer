@@ -1,5 +1,5 @@
-export { CONFIG, type GameConfig } from "./config.js";
-export * from "./types.js";
-export * from "./protocol.js";
-export { priceSegment } from "./pricing.js";
-export { initGame, reduce } from "./reducer.js";
+export {CONFIG, type GameConfig} from "./config";
+export * from "./types";
+export * from "./protocol";
+export { priceSegment } from "./pricing";
+export { initGame, reduce } from "./reducer";

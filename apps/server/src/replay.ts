@@ -9,6 +9,25 @@ import { Normalizer } from "./ingest/normalize.js";
  */
 
 /**
+ * Parse raw SSE text (the format of `/api/scores/historical/{fixtureId}`
+ * responses and our stream captures) into an array of data records.
+ */
+export function parseSseText(text: string): any[] {
+  return text
+    .split(/\r?\n\r?\n/)
+    .map((frame) => {
+      const m = frame.match(/^data: ?(.*)$/m);
+      if (!m) return null;
+      try {
+        return JSON.parse(m[1]!);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
+/**
  * Parse any recording format we produce:
  * - `.json`   plain JSON array (historical REST downloads)
  * - `.ndjson` recorder output, one {recordedAt, event, id?, data} per line
@@ -31,18 +50,7 @@ export function parseRecording(path: string): any[] {
       })
       .filter(Boolean);
   }
-  return text
-    .split(/\r?\n\r?\n/)
-    .map((frame) => {
-      const m = frame.match(/^data: ?(.*)$/m);
-      if (!m) return null;
-      try {
-        return JSON.parse(m[1]!);
-      } catch {
-        return null;
-      }
-    })
-    .filter(Boolean);
+  return parseSseText(text);
 }
 
 export interface TimedRaw {

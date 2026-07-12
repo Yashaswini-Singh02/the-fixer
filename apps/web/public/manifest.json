@@ -1,0 +1,21 @@
+{
+  "name": "The Fix",
+  "short_name": "The Fix",
+  "description": "Watch the match. Bet the segments. Fix your friends.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a130e",
+  "theme_color": "#0a130e",
+  "categories": ["games", "sports", "entertainment"],
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="flood" cx="50%" cy="8%" r="80%">
+      <stop offset="0%" stop-color="#fff3d0" stop-opacity="0.22"/>
+      <stop offset="45%" stop-color="#fff3d0" stop-opacity="0.03"/>
+      <stop offset="70%" stop-color="#fff3d0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffe08a"/>
+      <stop offset="100%" stop-color="#ffc531"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="#0a130e"/>
+  <rect width="512" height="512" rx="112" fill="url(#flood)"/>
+
+  <!-- summit -->
+  <circle cx="256" cy="96" r="30" fill="url(#gold)"/>
+  <circle cx="256" cy="96" r="30" fill="#ffc531" opacity="0.35"/>
+
+  <!-- ladder rails -->
+  <rect x="176" y="150" width="26" height="266" rx="13" fill="url(#gold)"/>
+  <rect x="310" y="150" width="26" height="266" rx="13" fill="url(#gold)"/>
+
+  <!-- rungs (top gold, one vermilion "fixed" rung) -->
+  <rect x="176" y="168" width="160" height="22" rx="11" fill="url(#gold)"/>
+  <rect x="176" y="230" width="160" height="22" rx="11" fill="url(#gold)"/>
+  <rect x="176" y="292" width="160" height="22" rx="11" fill="#ff4438"/>
+  <rect x="176" y="354" width="160" height="22" rx="11" fill="url(#gold)"/>
+</svg>

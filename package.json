@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "test": "pnpm -r test",
-    "record": "pnpm --filter @thefix/server record"
+    "record": "pnpm --filter @thefix/server record",
+    "serve": "pnpm --filter @thefix/server serve"
   },
   "devDependencies": {
     "typescript": "^5.6.0"

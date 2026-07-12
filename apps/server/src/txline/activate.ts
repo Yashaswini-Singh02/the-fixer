@@ -1,7 +1,7 @@
 import axios from "axios";
 import nacl from "tweetnacl";
-import { apiOrigin, apiBaseUrl } from "./config.js";
-import { payer } from "./wallet.js";
+import { apiOrigin, apiBaseUrl } from "./config";
+import { payer } from "./wallet";
 
 // usage: npx tsx src/txline/activate.ts <txSig-from-subscribe>
 const txSig = process.argv[2];

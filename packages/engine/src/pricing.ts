@@ -1,5 +1,5 @@
-import { CONFIG } from "./config.js";
-import type { MarketKind, MarketPrice, OddsSummary } from "./types.js";
+import { CONFIG } from "./config";
+import type { MarketKind, MarketPrice, OddsSummary } from "./types";
 
 /**
  * Pricing engine v1 (PRD §6): segment-level Yes/No probabilities via Poisson,

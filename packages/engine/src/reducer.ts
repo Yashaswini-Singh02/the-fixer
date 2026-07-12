@@ -1,6 +1,6 @@
 import type { MatchCounts, MatchPhase } from "@thefix/shared";
-import { CONFIG } from "./config.js";
-import { priceSegment } from "./pricing.js";
+import { CONFIG } from "./config";
+import { priceSegment } from "./pricing";
 import type {
   EngineEvent,
   FixResult,
@@ -8,7 +8,7 @@ import type {
   MarketKind,
   Segment,
   SegmentResult,
-} from "./types.js";
+} from "./types";
 
 /**
  * The load-bearing decision (PRD §7): a pure, deterministic reducer —

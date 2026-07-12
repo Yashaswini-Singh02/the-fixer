@@ -4,5 +4,6 @@ dist/
 .env
 .env.local
 recordings/
+apps/server/data/
 *.tsbuildinfo
 .DS_Store

@@ -1,0 +1,273 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────
+   THE FIX — "Floodlit Syndicate"
+   Deep floodlit-pitch base. Gold = money / the climb.
+   Vermilion = the fix, danger, exposure. Chalk = the odds board.
+   ───────────────────────────────────────────────────────────── */
+
+@theme {
+  /* pitch — the dark stadium-night base */
+  --color-pitch: #0a130e;
+  --color-pitch-2: #10201a;
+  --color-pitch-3: #182f27;
+  --color-slate: #0d1a15; /* chalk-board panels */
+
+  /* ink text on pitch */
+  --color-chalk: #f3f6ef;
+  --color-fog: #7f9187;
+  --color-fog-dim: #56655d;
+
+  /* money / the climb */
+  --color-gold: #ffc531;
+  --color-gold-deep: #d99b13;
+  --color-gold-soft: #ffe08a;
+
+  /* the fix / danger / exposure */
+  --color-vermilion: #ff4438;
+  --color-vermilion-deep: #c2170c;
+  --color-vermilion-soft: #ff8a80;
+
+  /* floodlight warmth (glows only) */
+  --color-flood: #fff3d0;
+
+  --font-display: var(--font-anton), "Arial Narrow", sans-serif;
+  --font-ui: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-slip: 1.375rem;
+
+  --shadow-lift: 0 18px 40px -22px rgba(0, 0, 0, 0.9);
+  --shadow-gold: 0 0 0 1px rgba(255, 197, 49, 0.5),
+    0 10px 30px -12px rgba(255, 197, 49, 0.45);
+}
+
+/* ── base ─────────────────────────────────────────────────── */
+
+html {
+  height: 100%;
+  color-scheme: dark;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  min-height: 100%;
+  background: var(--color-pitch);
+  color: var(--color-chalk);
+  font-family: var(--font-ui);
+  font-feature-settings: "ss01", "cv01";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+}
+
+::selection {
+  background: var(--color-gold);
+  color: #12130a;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* tabular figures everywhere numbers matter */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* ── the floodlit stage: full-bleed atmosphere behind the phone ── */
+
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(
+      120% 80% at 50% -18%,
+      rgba(255, 243, 208, 0.16),
+      rgba(255, 243, 208, 0.03) 34%,
+      transparent 60%
+    ),
+    radial-gradient(
+      90% 60% at 50% 120%,
+      rgba(16, 44, 33, 0.55),
+      transparent 60%
+    ),
+    var(--color-pitch);
+}
+/* faint mowed-pitch stripes */
+.stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.014) 0 40px,
+    transparent 40px 80px
+  );
+  mask-image: radial-gradient(80% 70% at 50% 30%, #000 20%, transparent 78%);
+}
+
+/* the phone-portrait column every screen lives in */
+.frame {
+  width: 100%;
+  max-width: 27rem; /* 432px, 390-first with breathing room */
+  margin-inline: auto;
+  padding-inline: 1.15rem;
+}
+
+/* ── chalk hairline (bookmaker's board rule) ──────────────── */
+.chalk-rule {
+  border-color: rgba(243, 246, 239, 0.1);
+}
+
+/* ── betting-slip card ────────────────────────────────────── */
+.slip {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 40%),
+    var(--color-pitch-2);
+  border: 1px solid rgba(243, 246, 239, 0.08);
+  border-radius: var(--radius-slip);
+}
+
+/* ── chalk odds board panel ───────────────────────────────── */
+.board {
+  background:
+    radial-gradient(
+      140% 120% at 12% -10%,
+      rgba(255, 255, 255, 0.05),
+      transparent 45%
+    ),
+    var(--color-slate);
+  border: 1px solid rgba(243, 246, 239, 0.07);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+/* chalk dust in the corners */
+.board::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    60% 40% at 85% 8%,
+    rgba(243, 246, 239, 0.05),
+    transparent 70%
+  );
+}
+
+/* ── gold pill button ─────────────────────────────────────── */
+.btn-gold {
+  background: linear-gradient(180deg, var(--color-gold-soft), var(--color-gold));
+  color: #14150a;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.4) inset,
+    0 -8px 16px -8px rgba(0, 0, 0, 0.4) inset,
+    0 14px 30px -14px rgba(255, 197, 49, 0.7);
+}
+.btn-gold:active {
+  transform: translateY(1px);
+}
+
+/* ── the FIX marker: struck, redacted, conspiratorial ─────── */
+.stamp-sealed {
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 68, 56, 0.14) 0 8px,
+    rgba(255, 68, 56, 0.05) 8px 16px
+  );
+  border: 1px dashed rgba(255, 68, 56, 0.5);
+  color: var(--color-vermilion-soft);
+}
+
+/* ── ladder rung glow at the summit ───────────────────────── */
+.rung-hot {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 197, 49, 0.16),
+    transparent 70%
+  );
+}
+
+/* ── animations ───────────────────────────────────────────── */
+@keyframes floatUp {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-120px) scale(1);
+  }
+}
+.react-float {
+  animation: floatUp 2.4s ease-out forwards;
+}
+
+@keyframes pulseLive {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.live-dot {
+  animation: pulseLive 1.4s ease-in-out infinite;
+}
+
+@keyframes flareIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.flare-in {
+  animation: flareIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes holdfill {
+  from {
+    transform: scale(0.7);
+    opacity: 0.25;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* hide scrollbars on horizontal chip rails */
+.no-bar::-webkit-scrollbar {
+  display: none;
+}
+.no-bar {
+  scrollbar-width: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

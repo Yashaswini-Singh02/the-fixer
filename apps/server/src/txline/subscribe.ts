@@ -6,8 +6,8 @@ import {
 import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
 import type { Txoracle } from "./types/txoracle";
 import txoracleIdl from "./idl/txoracle.json";
-import { rpcUrl, programId, txlTokenMint, NETWORK } from "./config.js";
-import { wallet } from "./wallet.js";
+import { rpcUrl, programId, txlTokenMint, NETWORK } from "./config";
+import { wallet } from "./wallet";
 
 const SERVICE_LEVEL_ID = 1;          // devnet free tier
 const DURATION_WEEKS = 4;

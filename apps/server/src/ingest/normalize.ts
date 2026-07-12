@@ -2,9 +2,13 @@ import type { MatchCounts, MatchPhase, Side, StreamEvent } from "@thefix/shared"
 
 /**
  * TxLINE scores-feed StatusId -> game phase, observed from real devnet data:
- * 1 pre-match, 2 first half, 3 halftime, 4 second half, 5 post-match,
- * 100 finalised. Extra-time / shootout StatusIds are unknown until we see a
- * knockout that goes long — the mapping is the single place to extend.
+ * 1 pre-match, 2 first half, 3 halftime, 4 second half, 5 post-match (after
+ * 90'), 100 finalised. Both 2026 semis went long and showed the ET sequence:
+ * 6 break before ET, 7 ET first half, 8 ET halftime, 9 ET second half,
+ * 10 post-ET. The pre-ET breaks map to the upcoming period so the previous
+ * segment closes at the whistle and the next opens while friends can still
+ * bet. Shootout StatusIds remain unobserved (no semi went to pens) — if the
+ * final does, 100 still lands us on FT; extend here when the data appears.
  */
 const STATUS_PHASE: Record<number, MatchPhase> = {
   1: "PRE",
@@ -12,6 +16,11 @@ const STATUS_PHASE: Record<number, MatchPhase> = {
   3: "HT",
   4: "H2",
   5: "FT",
+  6: "ET1",
+  7: "ET1",
+  8: "ET2",
+  9: "ET2",
+  10: "FT",
   100: "FT",
 };
 

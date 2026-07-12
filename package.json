@@ -1,0 +1,12 @@
+{
+  "name": "the-fix",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "pnpm -r test",
+    "record": "pnpm --filter @thefix/server record"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}

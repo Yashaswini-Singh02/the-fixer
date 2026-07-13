@@ -260,7 +260,10 @@ function resolveSegment(s: GameState, seg: Segment): void {
     const price = seg.prices[bet.market];
     const payout = bet.side === "YES" ? price.yes : price.no;
     const rungs = Math.min(
-      Math.round((bet.stake * (payout - 1)) / CONFIG.climbDivisor),
+      Math.max(
+        Math.round((bet.stake * (payout - 1)) / CONFIG.climbDivisor),
+        CONFIG.rungFloorPerWin,
+      ),
       CONFIG.rungCapPerMarket,
     );
     climbs[bet.playerId] = (climbs[bet.playerId] ?? 0) + rungs;

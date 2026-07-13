@@ -8,6 +8,9 @@ export const CONFIG = {
   segmentAllowance: 10,
   /** rungs = round(stake * (payout - 1) / climbDivisor) */
   climbDivisor: 3,
+  /** every winning bet climbs at least this many rungs — small stakes at
+   *  short odds would otherwise round to zero and feel like a dead win */
+  rungFloorPerWin: 1,
   /** max rungs a single market win can award */
   rungCapPerMarket: 6,
   /** ladder height — first to this rung wins */

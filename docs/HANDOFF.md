@@ -6,7 +6,7 @@ _Last updated: 2026-07-13. Written for a teammate (or their agent) picking up th
 
 ## 1. What this app is
 
-**THE FIX** is a mobile-first World Cup party game. Friends join a room with a 4-letter code, watch a real football match together, and bet secretly on 15-minute segments of that match — will there be a goal? 2+ corners? a card? Winning bets climb a 20-rung ladder; you can also pay 2 coins to secretly **fix** a friend (they win nothing that segment → you climb; they cash → it backfires and you're exposed). First to the top — or highest at full time — wins.
+**THE FIX** is a mobile-first World Cup party game. Friends join a room with a 4-letter code, watch a real football match together, and bet secretly on 15-minute segments of that match — will there be a goal? 2+ corners? a card? Winning bets climb a 20-rung ladder; you can also pay 2 coins to secretly **fix** a friend. If they win nothing that segment your fix lands: you climb, and *nobody learns it was you until full time* (your extra rungs hide in plain sight among everyone's climbs). If they cash, it backfires: they get a bonus rung and you're exposed on the spot. First to the top — or highest at full time — wins, and the FT screen confesses every landed fix.
 
 The match data is **real**: live matches stream from the TxLINE sports feed (devnet), and past matches replay from TxLINE's historical scores endpoint at configurable speed (20x compresses a 2-hour match into ~6 minutes).
 
@@ -18,8 +18,9 @@ The match data is **real**: live matches stream from the TxLINE sports feed (dev
 | Segments | 1–6 regulation (15-min blocks), 7–8 extra time | `packages/engine/src/reducer.ts` `dueSegment` |
 | Markets per segment | GOAL (1+), CORNERS (2+), CARD (1+) — Yes/No | `resolveSegment` |
 | Stake window | 180 match-clock seconds from segment open, then sealed | `config.ts stakeWindowSec` |
-| Climb | `round(stake × (payout − 1) / 3)`, capped 6 rungs/market | `config.ts` |
-| Fix cost / backfire | 2 coins; backfire gives target +1 rung and reveals fixer | `resolveSegment` |
+| Climb | `round(stake × (payout − 1) / 3)`, min 1 (a win never climbs zero), capped 6 rungs/market | `config.ts` |
+| Fix cost / backfire | 2 coins; backfire gives target +1 rung and names the fixer | `resolveSegment` |
+| Fix secrecy | a **landed** fix stays anonymous (nameless in reveals, rungs hidden from the public climb sheet) until full time; all names come out on the FT "confessions" list | `room.ts redactResult`, `FullTime.tsx` |
 | Ladder top | 20 rungs → instant win | `config.ts ladderTop` |
 | Red card | everyone above rung 10 slides down 1 | `reducer.ts` |
 | Players | 2–8 per room; first to join is organizer | `reducer.ts` |
@@ -62,13 +63,13 @@ PAST:  TxLINE /api/scores/historical/{id} (fetched at room  ──► replayInto
         WebSocket clients (apps/web useRoom hook)
 ```
 
-**Secrecy is server-side**: sealed bets leave the server only as counts until the segment resolves; the `reveal` message unseals everything at once.
+**Secrecy is server-side**: sealed bets leave the server only as counts until the segment resolves; the `reveal` message unseals bets and backfired fixes, but each client gets its **own redacted cut** — a landed fix is nameless (`fixerId: null`) to everyone except the fixer, and the fixer's stolen rungs are removed from that cut's climb sheet. The full truth ships only once `status === "finished"` (the FT confessions).
 
 ### Server HTTP/WS API
 
 - `GET  :8080/api/fixtures` → `[{id, home, away, kickoff, competition, kind}]` where `kind` ∈ `upcoming | live | past` (past = newest 3 within the historical window).
 - `POST :8080/api/rooms` body `{fixtureId, speed?}` → `{roomCode, kind}`. Past fixtures fetch full history up front (fails 502 if unavailable); live/upcoming attach the live streams immediately. `speed` (default 20, clamp 1–100000) applies to past rooms only.
-- `WS   :8080/ws` — client sends `hello {roomCode, playerId, name, emoji}` first, then `start | bet {market, side, stake} | fix {targetId} | react {emoji}`. Server sends `view {view}`, `reveal {result, bets}`, `react`, `error {code, message}`.
+- `WS   :8080/ws` — client sends `hello {roomCode, playerId, name, emoji}` first, then `start | bet {market, side, stake} | fix {targetId} | react {emoji}`. Server sends `view {view}`, `reveal {result, bets}` (per-recipient: landed fixes arrive `fixerId: null` unless you placed them), `react`, `error {code, message}`. **Rejected commands (e.g. a bet after the seal) are silently dropped** — no error frame; see §6.
 
 ### TxLINE (data provider) facts — verified against devnet 2026-07-13
 
@@ -83,7 +84,7 @@ PAST:  TxLINE /api/scores/historical/{id} (fetched at room  ──► replayInto
 
 ## 3. What was just done (2026-07-13 session)
 
-Goal: **remove all hardcoded/recorded data from the product flow** — fixtures come from the API, past matches replay from the historical endpoint on demand, rooms are created through the backend.
+Two waves of work in this session. First: **remove all hardcoded/recorded data from the product flow** — fixtures come from the API, past matches replay from the historical endpoint on demand, rooms are created through the backend. Second, after real playtesting: **gameplay & UX fixes** — the climb floor, fix anonymity until full time, and the celebration/ladder UI layer.
 
 | Change | File(s) |
 |---|---|
@@ -95,13 +96,18 @@ Goal: **remove all hardcoded/recorded data from the product flow** — fixtures 
 | **`parseSseText` extracted** so the historical HTTP response and file recordings share one parser. | `apps/server/src/replay.ts` |
 | **Web landing page wired to the backend** (real mode): fetches `GET /api/fixtures`, renders Live/Coming up/"Replay the latest matches" sections, click → `POST /api/rooms` → navigate to the returned code. Mock mode keeps the old scripted demo untouched. | `apps/web/src/app/page.tsx`, `apps/web/src/lib/api.ts` (new) |
 | **`room_not_found` now shows an error screen** instead of an infinite spinner; FullTime "rematch" routes home instead of to a dead locally-minted code. | `apps/web/src/hooks/useRoom.ts`, `apps/web/src/app/r/[code]/RoomClient.tsx` |
+| **Climb floor**: every winning bet now climbs ≥1 rung (`rungFloorPerWin`). Previously `round(stake × (payout−1) / 3)` rounded to **zero** for 1–2 coin stakes at short odds, so a correct prediction could feel like nothing happened. | `packages/engine/src/config.ts`, `reducer.ts` |
+| **UI polish & celebration layer**: the SEALED stamp no longer overlaps the bet pill (it's now a diagonal rubber-stamp across the odds); an un-staked side selection clears at the seal so it can't look like a placed bet; new `Celebration` component (confetti rain + dancing cat 🐈 + WebAudio chiptune fanfare — synthesized in-browser, zero audio assets/licensing) fires on any reveal where you climbed and in champion mode when you win at FT; the Ladder is redrawn as a real ladder (a line per rung, bolder every 5, per-lane rails, glowing progress trails, names, pulse ring + floating "+N" on climbs, "First to 20 🏆" summit). | `apps/web/src/components/MarketCard.tsx`, `Ladder.tsx`, `Celebration.tsx` (new), `RevealOverlay.tsx`, `screens/FullTime.tsx`, `apps/web/src/lib/winTune.ts` (new), `globals.css` |
+| **Landed fixes are anonymous until full time**: reveals are now sent per-player, not broadcast — a landed fix arrives with `fixerId: null` (and the fixer's rungs stripped from the climb sheet) for everyone except the fixer. Backfires stay fully named. `state.history` inside views is redacted the same way while live; the finished state carries the truth, which FullTime shows as a "confessions" list. New types `PublicFixResult` / `PublicSegmentResult` in the protocol. | `apps/server/src/rooms/room.ts`, `packages/engine/src/protocol.ts`, `apps/web/src/components/RevealOverlay.tsx`, `apps/web/src/components/screens/FullTime.tsx`, `apps/web/src/hooks/useRoom.ts` |
 
 ### Verification already performed
 
-- `pnpm test` — 28/28 pass (engine reducer, normalizer against real recordings, room redaction, full-pipeline bot sims of 3 real matches).
+- `pnpm test` — 29/29 pass (engine reducer incl. climb floor, normalizer against real recordings, per-viewer reveal redaction, full-pipeline bot sims of 3 real matches).
 - `tsc --noEmit` clean for both apps.
 - **Live end-to-end**: server booted against devnet, `GET /api/fixtures` returned real snapshot data (France–Spain & England–Argentina upcoming, Argentina–Switzerland past), `POST /api/rooms` created a historical room (1.4 MB history fetched with fresh guest JWT), and a scripted two-player game (`apps/server/scripts/e2e-room.mjs`) played all 8 segments: markets opened with prices, bets accepted then sealed, reveals matched the real match facts (Argentina 3-1 Switzerland, ET, cards), fixes resolved, winner declared at FT.
-- ⚠️ **One re-run pending**: the "fast-forward to kickoff" filter (last change in `server.ts`) was added *after* that e2e run and has not been re-verified. Re-run: `pnpm serve`, then `node apps/server/scripts/e2e-room.mjs <code>` per §5 — segment 1 should now open within seconds of START instead of ~1 minute.
+- **Fast-forward filter re-verified** (2026-07-13): after the "fast-forward to kickoff" filter landed in `server.ts`, a fresh e2e run (room MFC2, Argentina–Switzerland, speed 300) opened segment 1 **1.8 s after START** (previously ~72 s of dead air while the tape chewed through days of pre-match chatter). Full game completed: 8 segments, all markets priced, bets sealed/revealed, fixes resolved, winner declared.
+- **Fix anonymity is pinned at the wire level**: `apps/server/test/room.test.ts` captures the serialized frames each fake socket receives and asserts the fixer's own reveal names them (`fixerId:"b"`), the target's cut is nameless (`fixerId:null`), the fixer's rungs are absent from the target's climb sheet, and the same redaction holds for `state.history` inside later views.
+- **UI layer (stamp, ladder, celebration)**: `tsc` clean and hand-playtested in the browser by Yashaswini; there is no automated visual test — after UI edits, re-check §5 checklist items 3–5 and 8 by eye. The e2e script (`e2e-room.mjs`) also prints each bot's per-viewer fix cut (`fixes-as-<name>-sees-them`) for a no-browser anonymity check.
 
 ---
 
@@ -155,10 +161,12 @@ Identity (`playerId`) lives in browser localStorage — **two tabs in one browse
 5. Checklist while it runs:
    - [ ] Segment 1 opens shortly after START (players get 10 coins; GOAL/CORNERS/CARD cards show prices)
    - [ ] Opponent's picks invisible until reveal (only bet *counts* show)
-   - [ ] Stake window seals; segment closes at the 15' boundary/whistle → RevealOverlay with outcomes, everyone's bets, fix results, ladder climbs
-   - [ ] Fix flow: 2 coins, secret target, backfire exposes the fixer
+   - [ ] At the seal: SEALED rubber-stamps diagonally across each card **without covering your bet pill**; a side you highlighted but never staked un-highlights (it was never a bet)
+   - [ ] Segment closes at the 15' boundary/whistle → RevealOverlay with outcomes, everyone's bets, ladder climbs; **any win climbs ≥1 rung** (tiny stakes included)
+   - [ ] You climbed → confetti + dancing cat 🐈 + chiptune fanfare + "+N RUNGS!" (audio unlocks on your first tap — silent before that is normal)
+   - [ ] Fix flow: 2 coins, secret target. **Backfire names the fixer; a landed fix shows "Someone fixed …" to everyone except the fixer** (fixer sees their own +N). No `fixerId` readable in the target's devtools either
    - [ ] HT/FT phases, ET segments 7–8 if the match went long, red-card slide
-   - [ ] FullTime screen with winner (or tie) at FT / rung 20
+   - [ ] FullTime screen with winner (or tie), champion celebration if *you* won, "Most savage fix" award and **"The confessions" list naming every landed fix**
    - [ ] GOAL price is *neutral-constant* (~p 0.36, rising ~0.43 from 75') — expected, see §6 odds limitation
 6. Scripted alternative (no browsers): `node apps/server/scripts/e2e-room.mjs <CODE>` runs two bot players end-to-end and logs segments/prices/reveals/winner.
 7. Backend-only sanity (no server): `pnpm test` replays real recordings through the whole pipeline deterministically.
@@ -178,13 +186,14 @@ Identity (`playerId`) lives in browser localStorage — **two tabs in one browse
 
 **Functional gaps (ordered by suggested priority):**
 
-1. **Re-verify the kickoff fast-forward** (see §3 ⚠️).
-2. **The FT→kickoff+6h dead zone**: finished-but-not-yet-historical matches are offered as `live`. Options: use snapshot `GameState` to detect finished, hide the fixture for those hours, or label it "available at HH:MM".
-3. **No historical odds → flat GOAL pricing in past rooms.** Suggestion: run a lightweight odds recorder (`pnpm record <odds-stream-url> <file>` already exists) whenever a tracked fixture is live, keyed by fixtureId; `POST /api/rooms` for a past fixture picks up the capture if present, else neutral pricing. That makes every match played *while the server was up* replayable with sharp prices.
-4. **Rooms are in-memory only** — a server restart drops all rooms (players see the new "room not found" screen). `Room.log` already holds the full event history, so persistence = write log to disk/store, rebuild via `reduce` on boot. **Note: if this lands on Redis, that implementation is owned by Yashaswini — coordinate before writing any Redis code.**
-5. **Cold-start naming**: the registry only knows fixtures seen in the snapshot since it first ran; the historical payload has team IDs but no names. Old matches (e.g. Norway–England QF, 18213979) can't be listed even though their history is still downloadable. If TxLINE has a participant-name lookup, wiring it in would close this; otherwise accept it.
-6. **PENS phase mapping unobserved** — no shootout StatusIds have ever been seen on devnet (`normalize.ts STATUS_PHASE`). `100 → FT` fails soft if the final goes to pens; extend when real data appears.
-7. **Sudden-death tiebreak** is TBD — exact rung tie leaves `winnerId: null` and the UI shows a tie.
+1. **The FT→kickoff+6h dead zone**: finished-but-not-yet-historical matches are offered as `live`. Options: use snapshot `GameState` to detect finished, hide the fixture for those hours, or label it "available at HH:MM".
+2. **No historical odds → flat GOAL pricing in past rooms.** Suggestion: run a lightweight odds recorder (`pnpm record <odds-stream-url> <file>` already exists) whenever a tracked fixture is live, keyed by fixtureId; `POST /api/rooms` for a past fixture picks up the capture if present, else neutral pricing. That makes every match played *while the server was up* replayable with sharp prices.
+3. **Rooms are in-memory only** — a server restart drops all rooms (players see the new "room not found" screen). `Room.log` already holds the full event history, so persistence = write log to disk/store, rebuild via `reduce` on boot. **Note: if this lands on Redis, that implementation is owned by Yashaswini — coordinate before writing any Redis code.**
+4. **Cold-start naming**: the registry only knows fixtures seen in the snapshot since it first ran; the historical payload has team IDs but no names. Old matches (e.g. Norway–England QF, 18213979) can't be listed even though their history is still downloadable. If TxLINE has a participant-name lookup, wiring it in would close this; otherwise accept it.
+5. **Late bets are rejected silently.** A bet/fix sent after the seal is dropped by the reducer and the server broadcasts nothing — the client never learns. At speed 20 the window is only 9 s, so humans hit this constantly and think the UI is broken. Fix: have `room.apply` (or the WS handler in `server.ts`) send an `error {code:"sealed"}` back to the sender when a command is rejected, and toast it in `MatchRoom`. The UI-side confusion (highlighted side ≠ placed bet) is already fixed; this is the missing server half.
+6. **Kickoff display hides the date** — `apps/web/src/app/page.tsx kickoff()` formats weekday + time only, so a fixture two months out ("Australia v Brazil, Fri 8:30 PM" = Sep 25) looks like this week's match and reads as fake data. Show the date beyond ~6 days out.
+7. **PENS phase mapping unobserved** — no shootout StatusIds have ever been seen on devnet (`normalize.ts STATUS_PHASE`). `100 → FT` fails soft if the final goes to pens; extend when real data appears.
+8. **Sudden-death tiebreak** is TBD — exact rung tie leaves `winnerId: null` and the UI shows a tie.
 
 **Still hardcoded (accepted / by design):**
 
@@ -195,7 +204,7 @@ Identity (`playerId`) lives in browser localStorage — **two tabs in one browse
 - Defaults: server port 8080 (`packages/engine/src/protocol.ts`), localhost URLs in web env fallbacks, replay speed 20, snapshot cache 5 min, SSE idle watchdog 5 min, room cap 8.
 - `apps/server/src/txline/config.ts` — devnet/mainnet Solana program IDs + API origins (switch via `TXLINE_NETWORK`; mainnet untested by us).
 
-**Hygiene suggestions:** no auth/rate-limit on the room API and `cors origin:true` (fine for a LAN party, not for public hosting); `apps/web/src/lib/room.ts newRoomCode` is now mock-only and could move; consider surfacing "history unavailable (502)" nicely in the landing page error banner (it already displays the message text).
+**Hygiene suggestions:** no auth/rate-limit on the room API and `cors origin:true` (fine for a LAN party, not for public hosting); `apps/web/src/lib/room.ts newRoomCode` is now mock-only and could move; consider surfacing "history unavailable (502)" nicely in the landing page error banner (it already displays the message text); the mock demo (`mockSocket.ts`) emits unredacted results, so mock-mode reveals still name landed fixes — fine for a demo, just don't judge the anonymity feature there; the win fanfare is a synthesized chiptune (`winTune.ts`) — swapping in a real song means dropping a **licensed** audio file in `apps/web/public` and playing it instead.
 
 ---
 
@@ -219,7 +228,12 @@ apps/server/src/replay-cli.ts      CLI: print a recording's normalized timeline
 apps/server/scripts/e2e-room.mjs   scripted 2-player end-to-end game vs :8080
 apps/web/src/lib/api.ts            REST client (fixtures, create room)
 apps/web/src/lib/socket.ts         GameSocket seam; NEXT_PUBLIC_MOCK switch
+apps/web/src/lib/winTune.ts        WebAudio chiptune win fanfare (no audio assets)
 apps/web/src/hooks/useRoom.ts      WS state machine for all screens
 apps/web/src/app/page.tsx          landing: fixture list → create/join room
+apps/web/src/components/Ladder.tsx      the ladder: lanes, trails, +N climb pulses
+apps/web/src/components/Celebration.tsx confetti + dancing cat + fanfare overlay
+apps/web/src/components/RevealOverlay.tsx 3-act reveal (outcomes/bets/fixes)
+apps/web/src/components/screens/FullTime.tsx podium, awards, confessions list
 docs/FRONTEND_BRIEF.md             original UI brief
 ```

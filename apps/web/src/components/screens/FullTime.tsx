@@ -2,9 +2,10 @@
 
 import type { Player, RoomView } from "@thefix/engine";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { Avatar } from "@/components/Avatar";
+import { Celebration } from "@/components/Celebration";
 import { flagEmoji } from "@/lib/fixtures";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
@@ -27,16 +28,27 @@ export function FullTime({
   const podium = [ranked[1], ranked[0], ranked[2]].filter(Boolean) as Player[];
   const podiumRank = (p: Player) => ranked.indexOf(p);
 
-  // most savage successful fix across the match
-  let savage: { fixer: Player; target: Player; rungs: number } | null = null;
+  // full time is confession time: landed fixes were anonymous during the
+  // match, but the finished state carries the full truth — name them all
+  const confessions: {
+    index: number;
+    fixer: Player;
+    target: Player;
+    rungs: number;
+  }[] = [];
   for (const h of state.history)
     for (const f of h.fixes) {
-      if (!f.succeeded) continue;
-      if (savage && f.rungs <= savage.rungs) continue;
+      if (!f.succeeded || !f.fixerId) continue;
       const fx = state.players[f.fixerId];
       const tg = state.players[f.targetId];
-      if (fx && tg) savage = { fixer: fx, target: tg, rungs: f.rungs };
+      if (fx && tg)
+        confessions.push({ index: h.index, fixer: fx, target: tg, rungs: f.rungs });
     }
+
+  // most savage successful fix across the match
+  let savage: { fixer: Player; target: Player; rungs: number } | null = null;
+  for (const c of confessions)
+    if (!savage || c.rungs > savage.rungs) savage = c;
 
   // biggest single-segment climb ("best call")
   let best: { player: Player; rungs: number; index: number } | null = null;
@@ -46,6 +58,15 @@ export function FullTime({
       const p = state.players[pid];
       if (p) best = { player: p, rungs: c, index: h.index };
     }
+
+  // champion mode: you won the whole thing → big cat, big fanfare
+  const youWon = !!winner && winner.id === view.you;
+  const [party, setParty] = useState(youWon);
+  useEffect(() => {
+    if (!party) return;
+    const t = setTimeout(() => setParty(false), 7000);
+    return () => clearTimeout(t);
+  }, [party]);
 
   const [copied, setCopied] = useState(false);
   const share = async () => {
@@ -69,6 +90,7 @@ export function FullTime({
 
   return (
     <main className="frame flex min-h-dvh flex-col py-7">
+      {party && <Celebration big label="CHAMPION! 🏆" />}
       <div className="text-center">
         <div className="font-display text-xs uppercase tracking-[0.35em] text-gold">
           Full time
@@ -170,6 +192,29 @@ export function FullTime({
             )
           }
         />
+        {confessions.length > 0 && (
+          <Award
+            icon="🕵️"
+            label="The confessions"
+            body={
+              <>
+                {confessions.map((c, i) => (
+                  <div key={i}>
+                    Segment {c.index}:{" "}
+                    <b className="text-chalk">
+                      {c.fixer.id === view.you ? "You" : c.fixer.name}
+                    </b>{" "}
+                    🔨{" "}
+                    <b className="text-chalk">
+                      {c.target.id === view.you ? "you" : c.target.name}
+                    </b>{" "}
+                    <span className="text-vermilion-soft">+{c.rungs}</span>
+                  </div>
+                ))}
+              </>
+            }
+          />
+        )}
       </div>
 
       <div className="mt-auto flex gap-2.5 pt-6">

@@ -7,6 +7,7 @@ import { MARKETS } from "@thefix/engine";
 import type { Reveal } from "@/hooks/useRoom";
 import { MARKET_META } from "@/lib/format";
 import { Avatar } from "./Avatar";
+import { Celebration } from "./Celebration";
 
 const ACTS = ["Outcomes", "The bets", "The fixes"] as const;
 
@@ -21,6 +22,15 @@ export function RevealOverlay({
 }) {
   const [act, setAct] = useState(0);
   const { result, bets, playersAtReveal } = reveal;
+
+  // you climbed → cat, confetti and the fanfare over the first two acts
+  const youClimb = result.climbs[youId] ?? 0;
+  const [party, setParty] = useState(youClimb > 0);
+  useEffect(() => {
+    if (!party) return;
+    const t = setTimeout(() => setParty(false), 3500);
+    return () => clearTimeout(t);
+  }, [party]);
 
   // auto-advance through the acts; tap to hurry
   useEffect(() => {
@@ -51,6 +61,11 @@ export function RevealOverlay({
       onClick={next}
     >
       <div className="stage" aria-hidden />
+      {party && (
+        <Celebration
+          label={youClimb === 1 ? "+1 RUNG!" : `+${youClimb} RUNGS!`}
+        />
+      )}
       <div className="frame flex min-h-full flex-col justify-center py-10">
         {/* act header */}
         <div className="mb-6 text-center">
@@ -182,9 +197,10 @@ export function RevealOverlay({
                   </div>
                 )}
                 {result.fixes.map((f, i) => {
-                  const fixer = playersAtReveal[f.fixerId];
+                  // a landed fix arrives nameless unless YOU placed it
+                  const fixer = f.fixerId ? playersAtReveal[f.fixerId] : null;
                   const target = playersAtReveal[f.targetId];
-                  if (!fixer || !target) return null;
+                  if (!target || (!fixer && !f.succeeded)) return null;
                   return (
                     <motion.div
                       key={i}
@@ -197,26 +213,33 @@ export function RevealOverlay({
                       )}
                     >
                       <div className="flex items-center justify-center gap-2">
-                        <Avatar emoji={fixer.emoji} size="sm" ring={f.fixerId === youId ? "gold" : "red"} />
+                        <Avatar emoji={fixer?.emoji ?? "🕵️"} size="sm" ring={fixer && f.fixerId === youId ? "gold" : "red"} />
                         <span className="text-xl">🔨</span>
                         <Avatar emoji={target.emoji} size="sm" ring={f.targetId === youId ? "gold" : "none"} dim={f.succeeded} />
                       </div>
                       <p className="mt-3 text-center text-sm leading-snug">
-                        {f.succeeded ? (
+                        {f.succeeded && fixer ? (
                           <>
-                            <b className="text-chalk">{fixer.name}</b> fixed{" "}
+                            <b className="text-chalk">{f.fixerId === youId ? "You" : fixer.name}</b> fixed{" "}
                             <b className="text-chalk">{target.name}</b>…
                             and <b className="text-vermilion-soft">it LANDED</b>.{" "}
-                            <span className="text-gold">+{f.rungs} for {fixer.name}</span> 🔨
+                            <span className="text-gold">+{f.rungs} — nobody saw a thing</span> 🔨
                           </>
-                        ) : (
+                        ) : f.succeeded ? (
+                          <>
+                            <b className="text-chalk">Someone</b> fixed{" "}
+                            <b className="text-chalk">{f.targetId === youId ? "you" : target.name}</b>…
+                            and <b className="text-vermilion-soft">it LANDED</b>.
+                            Names come out at full time 🔨
+                          </>
+                        ) : fixer ? (
                           <>
                             <b className="text-chalk">{fixer.name}</b> came for{" "}
                             <b className="text-chalk">{target.name}</b>… but they{" "}
                             <b className="text-gold">CASHED</b>. Backfired — cover
                             blown, <span className="text-gold">{target.name} +1</span> 😈
                           </>
-                        )}
+                        ) : null}
                       </p>
                     </motion.div>
                   );

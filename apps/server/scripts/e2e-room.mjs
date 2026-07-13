@@ -64,13 +64,20 @@ function player(id, name, emoji, { organizer = false, better }) {
         }
       }
     }
-    if (msg.type === "reveal" && name === "Ana") {
+    if (msg.type === "reveal") {
       const r = msg.result;
-      log(
-        `[reveal] segment ${r.index} outcomes=${JSON.stringify(r.outcomes)} climbs=${JSON.stringify(
-          r.climbs,
-        )} bets-unsealed=${msg.bets.length} fixes=${r.fixes.length}`,
-      );
+      if (name === "Ana") {
+        log(
+          `[reveal] segment ${r.index} outcomes=${JSON.stringify(r.outcomes)} climbs=${JSON.stringify(
+            r.climbs,
+          )} bets-unsealed=${msg.bets.length}`,
+        );
+      }
+      // each player gets their own cut: landed fixes are nameless
+      // (fixerId null) to everyone but the fixer
+      if (r.fixes.length) {
+        log(`[${name}] fixes-as-${name}-sees-them: ${JSON.stringify(r.fixes)}`);
+      }
     }
     if (msg.type === "error") log(`[${name}] ERROR ${msg.code}: ${msg.message}`);
   };

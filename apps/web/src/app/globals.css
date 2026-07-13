@@ -254,6 +254,24 @@ body {
   }
 }
 
+/* confetti rain (Celebration.tsx sets --drift / --tilt per piece) */
+@keyframes confettiFall {
+  0% {
+    transform: translate3d(0, -6vh, 0) rotate(var(--tilt, 0deg));
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--drift, 0px), 108vh, 0)
+      rotate(calc(var(--tilt, 0deg) + 540deg));
+    opacity: 0.85;
+  }
+}
+.confetti {
+  animation: confettiFall linear both;
+  border-radius: 1px;
+  will-change: transform;
+}
+
 /* hide scrollbars on horizontal chip rails */
 .no-bar::-webkit-scrollbar {
   display: none;

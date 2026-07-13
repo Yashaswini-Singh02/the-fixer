@@ -1,7 +1,7 @@
 "use client";
 
 import type { BetSide, MarketKind, MarketPrice } from "@thefix/engine";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { MARKET_META, odds } from "@/lib/format";
 
@@ -22,6 +22,12 @@ export function MarketCard({
 }) {
   const meta = MARKET_META[market];
   const [side, setSide] = useState<BetSide | null>(yourBet?.side ?? null);
+
+  // a highlighted side with no stake is just a draft — clear it at the seal
+  // so it can't masquerade as a placed bet
+  useEffect(() => {
+    if (sealed && !yourBet) setSide(null);
+  }, [sealed, yourBet]);
 
   // re-betting this market refunds the old stake, so it's spendable again
   const maxStake = coins + (yourBet?.stake ?? 0);
@@ -102,9 +108,13 @@ export function MarketCard({
         })}
       </div>
 
+      {/* rubber-stamped diagonally across the odds, clear of the header
+          where the bet pill lives — nothing overlaps */}
       {sealed && (
-        <div className="stamp-sealed absolute right-3 top-3 rounded-lg px-2 py-1 text-[11px] font-bold uppercase tracking-widest">
-          Sealed 🤐
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 top-12 z-10 grid place-items-center">
+          <div className="stamp-sealed -rotate-6 rounded-lg px-4 py-1.5 text-sm font-bold uppercase tracking-widest shadow-lift">
+            Sealed 🤐
+          </div>
         </div>
       )}
     </div>

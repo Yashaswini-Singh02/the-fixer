@@ -1,6 +1,7 @@
 import type {
   Bet,
   BetSide,
+  FixResult,
   GameState,
   MarketKind,
   Segment,
@@ -23,8 +24,21 @@ export interface PublicSegment
   fixCount: number;
 }
 
-export interface PublicGameState extends Omit<GameState, "segment"> {
+/** Fix result as clients see it: a landed fix is nameless (fixerId null)
+ *  to everyone except the fixer until full time. Backfires are always named. */
+export interface PublicFixResult extends Omit<FixResult, "fixerId"> {
+  fixerId: string | null;
+}
+
+export interface PublicSegmentResult extends Omit<SegmentResult, "fixes"> {
+  fixes: PublicFixResult[];
+}
+
+export interface PublicGameState
+  extends Omit<GameState, "segment" | "history"> {
   segment: PublicSegment | null;
+  /** redacted while live (landed fixes anonymous); full truth once finished */
+  history: PublicSegmentResult[];
 }
 
 /** Everything one specific client is allowed to see. */
@@ -63,9 +77,10 @@ export type ClientMsg =
 export type ServerMsg =
   | { type: "view"; view: RoomView }
   | {
-      /** segment resolved: play the reveal — bets unsealed, fixes exposed */
+      /** segment resolved: play the reveal — bets unsealed, backfires named,
+       *  landed fixes anonymous (each client gets its own redacted cut) */
       type: "reveal";
-      result: SegmentResult;
+      result: PublicSegmentResult;
       bets: Bet[];
     }
   | { type: "react"; playerId: string; emoji: string }

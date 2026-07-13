@@ -76,22 +76,45 @@ describe("room redaction", () => {
     room.apply({ kind: "fix", ts: 2, playerId: "b", targetId: "a" });
     room.apply(clockEv(900)); // S1 resolves, S2 opens
 
+    const revealOf = (conn: FakeConn) => {
+      const m = conn.sent.find((x) => x.type === "reveal");
+      if (!m || m.type !== "reveal") throw new Error("no reveal received");
+      return m;
+    };
+
     for (const conn of [a, b]) {
       const revealAt = conn.sent.findIndex((m) => m.type === "reveal");
       expect(revealAt).toBeGreaterThan(-1);
-      const reveal = conn.sent[revealAt]!;
-      if (reveal.type !== "reveal") throw new Error("unreachable");
+      const reveal = revealOf(conn);
       expect(reveal.result.index).toBe(1);
       expect(reveal.bets).toEqual([
         { playerId: "a", market: "GOAL", side: "YES", stake: 5 },
       ]);
-      expect(reveal.result.fixes[0]).toMatchObject({ fixerId: "b", targetId: "a" });
       // the post-resolve view (S2 open) must arrive after the reveal
       const viewAfter = conn.sent
         .slice(revealAt + 1)
         .find((m) => m.type === "view");
       expect(viewAfter && viewAfter.type === "view" ? viewAfter.view.state.segment?.index : null).toBe(2);
     }
+
+    // no goal came, so a's bet lost and b's fix LANDED: b sees their own
+    // handiwork, but to a (and anyone else) the fix is nameless until FT
+    expect(revealOf(b).result.fixes[0]).toMatchObject({
+      fixerId: "b",
+      targetId: "a",
+      succeeded: true,
+    });
+    expect(revealOf(a).result.fixes[0]).toMatchObject({
+      fixerId: null,
+      targetId: "a",
+      succeeded: true,
+    });
+    // ...and the stolen rungs vanish from a's copy of the climb sheet
+    expect(revealOf(b).result.climbs["b"]).toBeGreaterThan(0);
+    expect(revealOf(a).result.climbs["b"]).toBeUndefined();
+    // the redaction must also hold for history riding inside later views
+    expect(a.view.state.history[0]!.fixes[0]!.fixerId).toBeNull();
+    expect(b.view.state.history[0]!.fixes[0]!.fixerId).toBe("b");
   });
 
   it("rejected commands change nothing and broadcast nothing", () => {

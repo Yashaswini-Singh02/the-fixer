@@ -139,6 +139,17 @@ describe("segments & betting", () => {
     );
     expect(s.players["b"]!.rung).toBe(expected);
   });
+
+  it("a winning bet always climbs at least the floor, even at tiny stakes", () => {
+    let s = liveGame();
+    // 1 coin on NO GOAL at short odds rounds to 0 by the raw formula —
+    // the floor guarantees a win is never a dead win
+    s = reduce(s, { kind: "bet", ts: 1, playerId: "b", market: "GOAL", side: "NO", stake: 1 });
+    const noPay = s.segment!.prices.GOAL.no;
+    expect(Math.round((1 * (noPay - 1)) / CONFIG.climbDivisor)).toBe(0);
+    s = reduce(s, clockEv(900)); // quiet segment: NO wins
+    expect(s.players["b"]!.rung).toBe(CONFIG.rungFloorPerWin);
+  });
 });
 
 describe("the Fixer", () => {

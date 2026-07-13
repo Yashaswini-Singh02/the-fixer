@@ -4,8 +4,11 @@ import {
   type Bet,
   type EngineEvent,
   type GameState,
+  type PublicFixResult,
   type PublicGameState,
+  type PublicSegmentResult,
   type RoomView,
+  type SegmentResult,
   type ServerMsg,
 } from "@thefix/engine";
 
@@ -70,10 +73,18 @@ export class Room {
     // any segment that resolved during this event triggers a reveal.
     // the engine drops bets at resolve, so grab them from the segment that
     // was open going in — later same-event resolutions can't have had bets.
+    // landed fixes stay anonymous until full time, so every player gets
+    // their own cut of the reveal (the fixer still sees their handiwork)
     for (const result of next.history.slice(prev.history.length)) {
       const bets: Bet[] =
         prev.segment?.index === result.index ? prev.segment.bets : [];
-      this.broadcast({ type: "reveal", result, bets });
+      for (const [conn, playerId] of this.conns) {
+        this.sendTo(conn, {
+          type: "reveal",
+          result: redactResult(result, playerId),
+          bets,
+        });
+      }
     }
 
     const wentLive = prev.status === "lobby" && next.status === "live";
@@ -88,7 +99,7 @@ export class Room {
       roomCode: this.code,
       fixture: this.fixture,
       you: playerId,
-      state: redact(s),
+      state: redact(s, playerId),
       yourBets: (s.segment?.bets ?? [])
         .filter((b) => b.playerId === playerId)
         .map(({ market, side, stake }) => ({ market, side, stake })),
@@ -123,11 +134,38 @@ export class Room {
   }
 }
 
-/** Strip per-player secrets from the shared state: bets -> counts, fixes -> total. */
-function redact(s: GameState): PublicGameState {
-  if (!s.segment) return { ...s, segment: null };
+/** Strip per-player secrets from the shared state: bets -> counts, fixes ->
+ *  total, and past segments keep landed fixes anonymous until full time. */
+function redact(s: GameState, viewerId: string): PublicGameState {
+  const history: PublicSegmentResult[] =
+    s.status === "finished"
+      ? s.history
+      : s.history.map((r) => redactResult(r, viewerId));
+  if (!s.segment) return { ...s, segment: null, history };
   const { bets, fixes, ...open } = s.segment;
   const betCounts: Record<string, number> = {};
   for (const b of bets) betCounts[b.playerId] = (betCounts[b.playerId] ?? 0) + 1;
-  return { ...s, segment: { ...open, betCounts, fixCount: fixes.length } };
+  return {
+    ...s,
+    segment: { ...open, betCounts, fixCount: fixes.length },
+    history,
+  };
+}
+
+/** A landed fix is nameless to everyone but its fixer, and its rungs leave
+ *  the public climb sheet — the ladder still moves, and that ambiguity is
+ *  the game. Backfires stay fully named; that's the punishment. */
+function redactResult(
+  r: SegmentResult,
+  viewerId: string,
+): PublicSegmentResult {
+  const climbs = { ...r.climbs };
+  const fixes: PublicFixResult[] = r.fixes.map((f) => {
+    if (!f.succeeded || f.fixerId === viewerId) return { ...f };
+    const left = (climbs[f.fixerId] ?? 0) - f.rungs;
+    if (left > 0) climbs[f.fixerId] = left;
+    else delete climbs[f.fixerId];
+    return { ...f, fixerId: null };
+  });
+  return { ...r, climbs, fixes };
 }

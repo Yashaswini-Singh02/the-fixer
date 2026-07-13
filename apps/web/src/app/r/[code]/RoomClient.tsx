@@ -96,6 +96,7 @@ function ConnectedRoom({
       <AnimatePresence>
         {reveal && (
           <RevealOverlay
+            key={reveal.result.index}
             reveal={reveal}
             youId={view.you}
             onDone={room.dismissReveal}

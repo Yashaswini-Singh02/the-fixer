@@ -3,8 +3,8 @@
 import type {
   BetSide,
   MarketKind,
+  PublicSegmentResult,
   RoomView,
-  SegmentResult,
   Bet,
   ServerMsg,
 } from "@thefix/engine";
@@ -13,7 +13,7 @@ import type { Identity } from "@/lib/identity";
 import { openRoom, type GameSocket } from "@/lib/socket";
 
 export interface Reveal {
-  result: SegmentResult;
+  result: PublicSegmentResult;
   bets: Bet[];
   /** player rungs the instant the segment resolved (post-climb) */
   playersAtReveal: RoomView["state"]["players"];

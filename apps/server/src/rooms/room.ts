@@ -11,6 +11,7 @@ import {
   type SegmentResult,
   type ServerMsg,
 } from "@thefix/engine";
+import { persistEvent } from "../redis.js";
 
 /** Anything that can receive a serialized ServerMsg (ws socket, test fake). */
 export interface Conn {
@@ -41,6 +42,25 @@ export class Room {
     this.state = initGame(fixture.id);
   }
 
+  /**
+   * Rebuild a room from its persisted event log. Folds every event straight
+   * through `reduce` — NOT apply() — so rehydration doesn't re-broadcast and,
+   * crucially, doesn't re-persist the log back into Redis. Sockets reattach
+   * later via hello() and pick up a fresh view then.
+   */
+  static rehydrate(
+    code: string,
+    fixture: RoomView["fixture"],
+    log: EngineEvent[],
+  ): Room {
+    const room = new Room(code, fixture);
+    for (const ev of log) {
+      room.state = reduce(room.state, ev);
+      room.log.push(ev);
+    }
+    return room;
+  }
+
   /** Attach a socket as playerId; joins the game if still in lobby. */
   hello(conn: Conn, playerId: string, name: string, emoji: string): void {
     this.conns.set(conn, playerId);
@@ -65,6 +85,11 @@ export class Room {
     if (next === prev) return; // rejected command or irrelevant event
     this.state = next;
     this.log.push(ev);
+    // mirror every accepted event into Redis so a crash/deploy can rebuild
+    // this room. fire-and-forget (see redis.ts) — a dead Redis can't stall
+    // the match, and this sits BEFORE the odds early-return on purpose so
+    // odds ticks are persisted too, or the rebuilt pricing would drift.
+    persistEvent(this.code, ev);
 
     // odds ticks only refresh the pricing input for the NEXT segment open —
     // nothing a client renders changed, so don't storm the sockets

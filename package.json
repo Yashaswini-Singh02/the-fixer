@@ -1,6 +1,7 @@
 {
   "name": "the-fix",
   "private": true,
+  "packageManager": "pnpm@11.10.0",
   "type": "module",
   "scripts": {
     "test": "pnpm -r test",

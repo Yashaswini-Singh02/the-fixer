@@ -13,6 +13,12 @@ import {
   fetchHistoricalScores,
   replayInto,
 } from "./rooms/drivers.js";
+import {
+  loadRoomCodes,
+  loadRoomFixture,
+  loadRoomLog,
+  persistRoomFixture,
+} from "./redis.js";
 import { Room } from "./rooms/room.js";
 import { authHeaders } from "./txline/auth.js";
 
@@ -64,6 +70,9 @@ app.post("/api/rooms", async (req, reply) => {
   const { kind, ...fixture } = listed;
 
   const room = new Room(makeCode(), fixture);
+  // stash the fixture now so a boot rebuild has the teams/kickoff the event
+  // log doesn't carry (the log's first event lands a moment later on hello)
+  persistRoomFixture(room.code, fixture);
 
   if (kind === "past") {
     // pull the full match history up front — if the feed can't serve it,
@@ -156,7 +165,35 @@ app.register(async (f) => {
   });
 });
 
-const address = await app.listen({ port: SERVER_PORT, host: "0.0.0.0" });
+// Resurrect any rooms Redis still holds so a crash or deploy doesn't drop a
+// match in flight: fold each persisted log back into a Room and re-attach the
+// live driver. Past-match replays rebuild to their last state — resuming the
+// compressed historical tape across a restart is a follow-up, not today's
+// live path.
+async function rebuildRooms(): Promise<void> {
+  for (const code of await loadRoomCodes()) {
+    const fixture = await loadRoomFixture(code);
+    const log = await loadRoomLog(code);
+    if (!fixture || log.length === 0) continue;
+    const room = Room.rehydrate(code, fixture, log);
+    rooms.set(code, room);
+    if (room.state.status === "finished") continue; // over — no driver needed
+    const listed = await registry.byId(fixture.id);
+    if (listed && listed.kind !== "past") {
+      driveLive(room, API_ORIGIN, (refresh) => authHeaders(API_ORIGIN, refresh));
+    }
+    console.log(
+      `room ${code} rebuilt from ${log.length} events (${room.state.status})`,
+    );
+  }
+}
+
+await rebuildRooms();
+
+const address = await app.listen({
+  port: Number(process.env.PORT ?? SERVER_PORT),
+  host: "0.0.0.0",
+});
 const fixtures = await registry.list();
 console.log(
   `THE FIX room server on ${address} — ${fixtures.filter((f) => f.kind === "past").length} past / ${fixtures.filter((f) => f.kind !== "past").length} current fixtures known`,

@@ -97,8 +97,8 @@ export default function Landing() {
           THE
           <br />
           <span className="relative inline-block text-gold">
-            FIX
-            <span className="absolute -right-9 top-1 text-4xl">🔨</span>
+            FIXER
+    
           </span>
         </h1>
         <p className="mx-auto mt-4 max-w-[19rem] text-sm leading-snug text-fog">

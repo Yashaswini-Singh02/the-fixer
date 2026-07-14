@@ -8,12 +8,24 @@ import { FIXTURES, flagEmoji } from "@/lib/fixtures";
 import { isMockMode } from "@/lib/socket";
 import { newRoomCode } from "@/lib/room";
 
-const kickoff = (ms: number) =>
-  new Intl.DateTimeFormat("en", {
+const SIX_DAYS_MS = 6 * 24 * 60 * 60 * 1000;
+
+/** Weekday + time soon; add month/day (and year if needed) beyond ~6 days. */
+const kickoff = (ms: number) => {
+  const d = new Date(ms);
+  const far = Math.abs(d.getTime() - Date.now()) > SIX_DAYS_MS;
+  const opts: Intl.DateTimeFormatOptions = {
     weekday: "short",
     hour: "numeric",
     minute: "2-digit",
-  }).format(new Date(ms));
+  };
+  if (far) {
+    opts.month = "short";
+    opts.day = "numeric";
+    if (d.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
+  }
+  return new Intl.DateTimeFormat("en", opts).format(d);
+};
 
 /** The mock's fixed fixture list, dressed up in the API shape. */
 const MOCK_FIXTURES: ApiFixture[] = FIXTURES.map((f, i) => ({

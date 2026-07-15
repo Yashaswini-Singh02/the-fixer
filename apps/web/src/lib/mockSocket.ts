@@ -1,4 +1,5 @@
 import {
+  CONFIG,
   initGame,
   reduce,
   type ClientMsg,
@@ -50,6 +51,9 @@ export class MockSocket implements GameSocket {
   private botsSeated = false;
   private timelineStarted = false;
   private closed = false;
+  // guess window (mirrors the server: wall clock here, never in the engine)
+  private guessDeadline: number | null = null;
+  private guessTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private roomCode: string) {
     this.state = initGame(DEMO_FIXTURE.id);
@@ -118,6 +122,16 @@ export class MockSocket implements GameSocket {
             targetId: msg.targetId,
           });
         break;
+      case "guess":
+        if (this.me)
+          this.apply({
+            kind: "guess",
+            ts: Date.now(),
+            playerId: this.me.playerId,
+            segmentIndex: msg.segmentIndex,
+            guessedFixerIds: msg.guessedFixerIds,
+          });
+        break;
       case "react":
         if (this.me)
           this.emit({
@@ -144,6 +158,7 @@ export class MockSocket implements GameSocket {
         this.me?.playerId ?? "",
         this.roomCode,
         DEMO_FIXTURE,
+        this.guessDeadline,
       ),
     };
   }
@@ -152,13 +167,47 @@ export class MockSocket implements GameSocket {
   private apply(ev: EngineEvent): void {
     if (this.closed) return;
     const prevHistory = this.state.history.length;
+    const prevGuessing = this.state.guessing;
     const resolvingBets = this.state.segment?.bets ?? [];
     this.state = reduce(this.state, ev);
     if (this.state.history.length > prevHistory) {
       const result = this.state.history[this.state.history.length - 1];
       this.emit({ type: "reveal", result, bets: resolvingBets });
     }
+    this.syncGuess(prevGuessing);
     if (this.me) this.emit(this.buildView());
+  }
+
+  /** Start/stop the guess-window clock as the engine opens/closes it. */
+  private syncGuess(prev: GameState["guessing"]): void {
+    const now = this.state.guessing;
+    if (prev && !now) {
+      this.clearGuessTimer(); // engine closed the window
+      return;
+    }
+    if (!prev && now) {
+      this.guessDeadline = Date.now() + CONFIG.guessWindowSec * 1000;
+      this.guessTimer = setTimeout(
+        () => this.closeGuess(),
+        CONFIG.guessWindowSec * 1000,
+      );
+      return;
+    }
+    if (now && now.slots.every((sl) => sl.resolved)) this.closeGuess();
+  }
+
+  /** Inject guessWindowClosed so the paused segment machine rolls on. */
+  private closeGuess(): void {
+    this.clearGuessTimer();
+    if (this.state.guessing) {
+      this.apply({ kind: "guessWindowClosed", ts: Date.now() });
+    }
+  }
+
+  private clearGuessTimer(): void {
+    if (this.guessTimer) clearTimeout(this.guessTimer);
+    this.guessTimer = null;
+    this.guessDeadline = null;
   }
 
   private seatBots(): void {
@@ -301,12 +350,17 @@ export class MockSocket implements GameSocket {
     this.apply(this.cornerEv("away", 385, H1)); // CORNERS: YES (2+)
     await wait(1200);
 
-    // close S1 at 15' → resolve → reveal
+    // close S1 at 15' → resolve → reveal (Sam's fix on you may have landed)
     this.apply(this.clockEv(900, H1));
     await wait(6500); // let the reveal breathe
 
+    // if a fix landed on you, the guess window is open (segment machine paused);
+    // give the modal a beat to be answered, then "time it out" and roll on
+    if (this.state.guessing) await wait(4500);
+    this.closeGuess();
+
     // ── SEGMENT 2 ────────────────────────────────────────────
-    this.apply(this.clockEv(900, H1)); // S2 opens
+    this.apply(this.clockEv(900, H1)); // S2 opens (no-op if closeGuess already did)
     await wait(700);
     this.botBet("bot-rahul", "GOAL", "YES", 4);
     this.botBet("bot-sam", "CARD", "YES", 5);

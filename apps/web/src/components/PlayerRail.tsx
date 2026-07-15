@@ -22,6 +22,7 @@ export function PlayerRail({
   yourFixTarget,
   coins,
   sealed,
+  fixLocked,
   onFix,
 }: {
   others: RailPlayer[];
@@ -30,6 +31,8 @@ export function PlayerRail({
   yourFixTarget: string | null;
   coins: number;
   sealed: boolean;
+  /** a fix backfired on you last segment — you can't fix this one */
+  fixLocked: boolean;
   onFix: (targetId: string) => void;
 }) {
   const [holding, setHolding] = useState<string | null>(null);
@@ -37,10 +40,11 @@ export function PlayerRail({
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const canAfford = coins >= CONFIG.fixCost || yourFixTarget !== null;
+  const canFix = !fixLocked && canAfford;
 
   const startHold = useCallback(
     (p: RailPlayer) => {
-      if (sealed || !canAfford) return;
+      if (sealed || !canFix) return;
       setHolding(p.id);
       timer.current = setTimeout(() => {
         setHolding(null);
@@ -48,7 +52,7 @@ export function PlayerRail({
         if (navigator.vibrate) navigator.vibrate(30);
       }, HOLD_MS);
     },
-    [sealed, canAfford],
+    [sealed, canFix],
   );
   const cancelHold = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -131,9 +135,11 @@ export function PlayerRail({
       <p className="mt-2 text-center text-[11px] text-fog-dim">
         {sealed
           ? "bets sealed — the fix window is closed"
-          : canAfford
-            ? "hold a friend to fix them 🔨 · costs 2🪙"
-            : "not enough coins to fix this segment"}
+          : fixLocked
+            ? "🔒 benched — your last fix backfired, no fixing this segment"
+            : canAfford
+              ? "hold a friend to fix them 🔨 · costs 2🪙"
+              : "not enough coins to fix this segment"}
       </p>
 
       <AnimatePresence>

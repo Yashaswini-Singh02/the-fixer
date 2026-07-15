@@ -11,6 +11,16 @@ export interface Player {
   rung: number;
   /** coins remaining in the current segment */
   coins: number;
+  /** fix banned this segment (a fix backfired on you last segment) */
+  fixLocked: boolean;
+  // ── carry-over modifiers, applied to NEXT segment's allowance then cleared ──
+  /** halve next allowance (10 → 5) — set when your fix backfires */
+  pendingHalve: boolean;
+  /** additive coins next segment — a landed fix (+4) and/or a correct guess
+   *  (+2) both accumulate here, so they stack (e.g. 10 + 4 + 2 = 16) */
+  pendingCoinBonus: number;
+  /** ban fixing next segment — set alongside pendingHalve on a backfire */
+  pendingFixLock: boolean;
 }
 
 export interface MarketPrice {
@@ -65,6 +75,29 @@ export interface SegmentResult {
   prices: Record<MarketKind, MarketPrice>;
 }
 
+/** One fixed player's open guess: name your fixer(s) before the window shuts. */
+export interface GuessSlot {
+  /** the player who was fixed and gets to guess */
+  victimId: string;
+  segmentIndex: number;
+  /** the true fixer id(s) who landed on this victim — SERVER-ONLY truth,
+   *  never leaves the room in a client view */
+  fixerIds: string[];
+  /** ids the victim named, once they've submitted (null while unresolved) */
+  guessedIds: string[] | null;
+  /** true once submitted or the window closed */
+  resolved: boolean;
+  /** did they clear the "miss at most one" bar — only meaningful once resolved */
+  correct: boolean;
+}
+
+/** The between-segments guess window. While non-null the segment machine is
+ *  paused: no next segment opens until guessWindowClosed clears it. */
+export interface GuessingState {
+  segmentIndex: number;
+  slots: GuessSlot[];
+}
+
 export type GameStatus = "lobby" | "live" | "finished";
 
 /** Rolling summary of the odds stream — the pricing engine's live input. */
@@ -84,6 +117,9 @@ export interface GameState {
   odds: OddsSummary;
   segment: Segment | null;
   history: SegmentResult[];
+  /** active between-segments guess window, or null. Pauses the segment machine
+   *  while a fixed player names their fixer (see GuessingState). */
+  guessing: GuessingState | null;
   winnerId: string | null;
 }
 
@@ -99,7 +135,19 @@ export type Command =
       side: BetSide;
       stake: number;
     }
-  | { kind: "fix"; ts: number; playerId: string; targetId: string };
+  | { kind: "fix"; ts: number; playerId: string; targetId: string }
+  | {
+      kind: "guess";
+      ts: number;
+      playerId: string;
+      /** which resolved segment's fix(es) this guess is for */
+      segmentIndex: number;
+      /** the fixer(s) the victim is naming; each true fixer matches at most once */
+      guessedFixerIds: string[];
+    }
+  /** server-injected when the 30s window elapses (or everyone has guessed):
+   *  clears the guess window and lets the next segment open */
+  | { kind: "guessWindowClosed"; ts: number };
 
 /** Everything the reducer consumes: match stream + player commands. */
 export type EngineEvent = StreamEvent | Command;

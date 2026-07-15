@@ -1,6 +1,9 @@
+"use client";
+
 import type { GameState } from "@thefix/engine";
 import { clock, PHASE_LABEL, segmentTag } from "@/lib/format";
 import { flagEmoji } from "@/lib/fixtures";
+import { useSmoothClock } from "@/hooks/useSmoothClock";
 
 type MatchCounts = GameState["counts"];
 type MatchPhase = GameState["phase"];
@@ -26,6 +29,7 @@ export function ScoreStrip({
 }) {
   const hg = counts.goals.home;
   const ag = counts.goals.away;
+  const shownClock = useSmoothClock(clockSec, live);
   return (
     <div className="slip flex items-center justify-between gap-2 px-3.5 py-2.5">
       <Team flag={flagEmoji(home)} code={abbr(home)} />
@@ -40,7 +44,7 @@ export function ScoreStrip({
           {live && (
             <span className="live-dot inline-block h-1.5 w-1.5 rounded-full bg-vermilion" />
           )}
-          <span className="tabular-nums text-chalk/80">{clock(clockSec)}</span>
+          <span className="tabular-nums text-chalk/80">{clock(shownClock)}</span>
           <span className="text-fog-dim">·</span>
           <span>{segmentIndex ? segmentTag(segmentIndex) : PHASE_LABEL[phase]}</span>
         </div>

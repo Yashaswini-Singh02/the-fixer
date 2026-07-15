@@ -155,6 +155,17 @@ app.register(async (f) => {
         case "fix":
           room.apply({ kind: "fix", ts, playerId, targetId: String(msg.targetId) });
           break;
+        case "guess":
+          room.apply({
+            kind: "guess",
+            ts,
+            playerId,
+            segmentIndex: Number(msg.segmentIndex),
+            guessedFixerIds: Array.isArray(msg.guessedFixerIds)
+              ? msg.guessedFixerIds.map(String)
+              : [],
+          });
+          break;
         case "react":
           room.react(playerId, String(msg.emoji).slice(0, 8));
           break;

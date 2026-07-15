@@ -1,6 +1,6 @@
 "use client";
 
-import type { Player, RoomView } from "@thefix/engine";
+import type { PublicPlayer, RoomView } from "@thefix/engine";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import clsx from "clsx";
@@ -21,19 +21,19 @@ export function FullTime({
   const { state, fixture } = view;
   const players = Object.values(state.players);
   const ranked = [...players].sort((a, b) => b.rung - a.rung);
-  const winner: Player | undefined = state.winnerId
+  const winner: PublicPlayer | undefined = state.winnerId
     ? state.players[state.winnerId]
     : ranked[0];
   // podium order for display: 2nd, 1st, 3rd
-  const podium = [ranked[1], ranked[0], ranked[2]].filter(Boolean) as Player[];
-  const podiumRank = (p: Player) => ranked.indexOf(p);
+  const podium = [ranked[1], ranked[0], ranked[2]].filter(Boolean) as PublicPlayer[];
+  const podiumRank = (p: PublicPlayer) => ranked.indexOf(p);
 
   // full time is confession time: landed fixes were anonymous during the
   // match, but the finished state carries the full truth — name them all
   const confessions: {
     index: number;
-    fixer: Player;
-    target: Player;
+    fixer: PublicPlayer;
+    target: PublicPlayer;
     rungs: number;
   }[] = [];
   for (const h of state.history)
@@ -46,12 +46,12 @@ export function FullTime({
     }
 
   // most savage successful fix across the match
-  let savage: { fixer: Player; target: Player; rungs: number } | null = null;
+  let savage: { fixer: PublicPlayer; target: PublicPlayer; rungs: number } | null = null;
   for (const c of confessions)
     if (!savage || c.rungs > savage.rungs) savage = c;
 
   // biggest single-segment climb ("best call")
-  let best: { player: Player; rungs: number; index: number } | null = null;
+  let best: { player: PublicPlayer; rungs: number; index: number } | null = null;
   for (const h of state.history)
     for (const [pid, c] of Object.entries(h.climbs)) {
       if (best && c <= best.rungs) continue;

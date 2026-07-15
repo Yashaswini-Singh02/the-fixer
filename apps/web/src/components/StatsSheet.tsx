@@ -279,10 +279,10 @@ function OnYouLine({ row }: { row: OnYouRow }) {
       <Avatar emoji={row.fixer?.emoji ?? "😈"} size="xs" ring="red" />
       <span className="min-w-0 flex-1 truncate text-sm leading-snug text-chalk/90">
         <b className="text-chalk">{row.fixer?.name ?? "Someone"}</b> came for you
-        and got exposed
+        - it backfired
       </span>
       <span className="shrink-0 font-display text-xs uppercase tracking-wide text-gold">
-        +{row.rungs}
+        exposed 🔒
       </span>
     </div>
   );

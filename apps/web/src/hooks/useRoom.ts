@@ -37,6 +37,7 @@ export interface RoomApi {
   start: () => void;
   bet: (market: MarketKind, side: BetSide, stake: number) => void;
   fix: (targetId: string) => void;
+  guess: (segmentIndex: number, guessedFixerIds: string[]) => void;
   react: (emoji: string) => void;
 }
 
@@ -134,6 +135,12 @@ export function useRoom(roomCode: string, identity: Identity): RoomApi {
   const fix = useCallback((targetId: string) => {
     socketRef.current?.send({ type: "fix", targetId });
   }, []);
+  const guess = useCallback(
+    (segmentIndex: number, guessedFixerIds: string[]) => {
+      socketRef.current?.send({ type: "guess", segmentIndex, guessedFixerIds });
+    },
+    [],
+  );
   const react = useCallback((emoji: string) => {
     socketRef.current?.send({ type: "react", emoji });
   }, []);
@@ -149,6 +156,7 @@ export function useRoom(roomCode: string, identity: Identity): RoomApi {
     start,
     bet,
     fix,
+    guess,
     react,
   };
 }

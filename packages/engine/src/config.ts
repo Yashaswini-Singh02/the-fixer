@@ -17,6 +17,17 @@ export const CONFIG = {
   ladderTop: 20,
   /** coins to place a fix on another player */
   fixCost: 2,
+  /** a landed fix hands the fixer this many bonus coins next segment
+   *  (10 + 4 = 14) — twice the fix cost, "the job paid off" */
+  fixSuccessCoinBonus: 4,
+  /** a backfired fix halves the fixer's next-segment allowance (10 / 2 = 5) */
+  backfireCoinDivisor: 2,
+  /** naming your fixer correctly in the guess window pays this next segment
+   *  (10 + 2 = 12) */
+  correctGuessCoinBonus: 2,
+  /** how long a fixed player has to guess their fixer, seconds — the server
+   *  owns this wall clock; the engine only reacts to guessWindowClosed */
+  guessWindowSec: 30,
   /** payout = 1/p, capped here (fair odds, no margin) */
   payoutCap: 6.0,
   /** stake window length from segment open, seconds */

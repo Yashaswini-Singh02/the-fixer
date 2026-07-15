@@ -1,4 +1,4 @@
-import type { Player, RoomView } from "@thefix/engine";
+import type { PublicPlayer, RoomView } from "@thefix/engine";
 import { CONFIG } from "@thefix/engine";
 
 /** One segment's contribution to your climb. */
@@ -10,7 +10,7 @@ export interface ClimbRow {
 /** A fix YOU placed on someone. */
 export interface JobRow {
   index: number;
-  target: Player | undefined;
+  target: PublicPlayer | undefined;
   /** true = you climbed; false = it backfired and they cashed */
   succeeded: boolean;
   rungs: number;
@@ -20,7 +20,7 @@ export interface JobRow {
 export interface OnYouRow {
   index: number;
   /** null while a landed fix is still anonymous — the name unseals at full time */
-  fixer: Player | null;
+  fixer: PublicPlayer | null;
   /** true = it landed (you won nothing); false = you cashed and exposed them */
   succeeded: boolean;
   rungs: number;
@@ -29,7 +29,7 @@ export interface OnYouRow {
 /** Everything the "Your File" panel shows — derived purely from the redacted
  *  history the client already holds. No extra storage, no server round-trip. */
 export interface Dossier {
-  you: Player | undefined;
+  you: PublicPlayer | undefined;
   rung: number;
   ladderTop: number;
   /** 1-based standing on the ladder (ties share the higher rank) */

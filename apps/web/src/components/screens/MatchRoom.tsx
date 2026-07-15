@@ -12,16 +12,19 @@ import { ScoreStrip } from "@/components/ScoreStrip";
 import { StakeWindow } from "@/components/StakeWindow";
 import { StandingBar } from "@/components/StandingBar";
 import { StatsSheet } from "@/components/StatsSheet";
+import { GuessSheet } from "@/components/GuessSheet";
 
 export function MatchRoom({
   view,
   onBet,
   onFix,
+  onGuess,
   onReact,
 }: {
   view: RoomView;
   onBet: (market: MarketKind, side: BetSide, stake: number) => void;
   onFix: (targetId: string) => void;
+  onGuess: (segmentIndex: number, guessedFixerIds: string[]) => void;
   onReact: (emoji: string) => void;
 }) {
   const { state } = view;
@@ -93,6 +96,7 @@ export function MatchRoom({
             yourFixTarget={view.yourFixTarget}
             coins={coins}
             sealed={seg.sealed}
+            fixLocked={you?.fixLocked ?? false}
             onFix={onFix}
           />
         </>
@@ -105,6 +109,15 @@ export function MatchRoom({
           <p className="mt-1 text-sm text-fog">
             Fresh coins and new markets open at the next whistle.
           </p>
+          {view.nextSegment && (
+            <p className="mt-3 font-display text-sm uppercase tracking-wide">
+              <span className="text-fog">Next segment · </span>
+              <span className="text-gold">{view.nextSegment.coins}🪙</span>
+              {view.nextSegment.fixLocked && (
+                <span className="text-vermilion-soft"> · 🔒 no fix</span>
+              )}
+            </p>
+          )}
         </div>
       )}
 
@@ -117,6 +130,10 @@ export function MatchRoom({
         {fileOpen && (
           <StatsSheet view={view} onClose={() => setFileOpen(false)} />
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {view.guess && <GuessSheet guess={view.guess} onGuess={onGuess} />}
       </AnimatePresence>
     </main>
   );

@@ -82,6 +82,11 @@ function runSim(fixtureId: string, scoresFile: string, oddsFile: string) {
       if (violations.length < 5)
         violations.push(...checkInvariants(s, prev, `ev${eventCount}(${e.kind})`));
 
+      // bots don't play the guess window — let it "time out" so the paused
+      // segment machine advances (the deterministic stand-in for the server's
+      // 30s timer injecting guessWindowClosed)
+      while (s.guessing) s = reduce(s, { kind: "guessWindowClosed", ts: e.ts });
+
       if (s.segment && s.segment.index !== lastSegIndex) {
         lastSegIndex = s.segment.index;
         s = placeBets(s, e.ts);

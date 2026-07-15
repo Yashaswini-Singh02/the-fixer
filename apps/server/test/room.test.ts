@@ -74,7 +74,7 @@ describe("room redaction", () => {
     const { room, a, b } = liveRoom();
     room.apply({ kind: "bet", ts: 1, playerId: "a", market: "GOAL", side: "YES", stake: 5 });
     room.apply({ kind: "fix", ts: 2, playerId: "b", targetId: "a" });
-    room.apply(clockEv(900)); // S1 resolves, S2 opens
+    room.apply(clockEv(900)); // S1 resolves; b's fix LANDS → guess window opens
 
     const revealOf = (conn: FakeConn) => {
       const m = conn.sent.find((x) => x.type === "reveal");
@@ -90,12 +90,26 @@ describe("room redaction", () => {
       expect(reveal.bets).toEqual([
         { playerId: "a", market: "GOAL", side: "YES", stake: 5 },
       ]);
-      // the post-resolve view (S2 open) must arrive after the reveal
+      // the fix landed, so the machine is paused on the guess window: the
+      // post-resolve view arrives after the reveal, with no open segment yet
       const viewAfter = conn.sent
         .slice(revealAt + 1)
         .find((m) => m.type === "view");
-      expect(viewAfter && viewAfter.type === "view" ? viewAfter.view.state.segment?.index : null).toBe(2);
+      expect(
+        viewAfter && viewAfter.type === "view"
+          ? viewAfter.view.state.segment
+          : undefined,
+      ).toBeNull();
     }
+
+    // only the victim (a) is offered a guess; the fixer (b) is not
+    expect(a.view.guess?.segmentIndex).toBe(1);
+    expect(b.view.guess).toBeNull();
+
+    // closing the window unfreezes the machine → S2 opens
+    room.apply({ kind: "guessWindowClosed", ts: 3 });
+    expect(a.view.state.segment?.index).toBe(2);
+    expect(b.view.state.segment?.index).toBe(2);
 
     // no goal came, so a's bet lost and b's fix LANDED: b sees their own
     // handiwork, but to a (and anyone else) the fix is nameless until FT

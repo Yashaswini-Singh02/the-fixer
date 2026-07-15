@@ -1,6 +1,9 @@
+"use client";
+
 import { CONFIG } from "@thefix/engine";
 import clsx from "clsx";
 import { countdown } from "@/lib/format";
+import { useSmoothClock } from "@/hooks/useSmoothClock";
 
 export function StakeWindow({
   coins,
@@ -13,7 +16,10 @@ export function StakeWindow({
   clockSec: number;
   sealed: boolean;
 }) {
-  const remaining = openClock + CONFIG.stakeWindowSec - clockSec;
+  // smooth the clock so the countdown ticks per-second instead of jumping with
+  // each coarse `clock` update; freeze it once bets seal
+  const shownClock = useSmoothClock(clockSec, !sealed);
+  const remaining = openClock + CONFIG.stakeWindowSec - shownClock;
   const frac = Math.max(0, Math.min(1, remaining / CONFIG.stakeWindowSec));
   const urgent = !sealed && remaining <= 30;
 

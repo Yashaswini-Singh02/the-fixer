@@ -84,6 +84,7 @@ function ConnectedRoom({
             view={view}
             onBet={room.bet}
             onFix={room.fix}
+            onGuess={room.guess}
             onReact={room.react}
           />
           <ReactionLayer reactions={room.reactions} />

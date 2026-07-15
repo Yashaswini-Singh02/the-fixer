@@ -1,15 +1,20 @@
 import {
+  CONFIG,
+  guessThreshold,
   initGame,
+  nextSegmentAllowance,
   reduce,
   type Bet,
   type EngineEvent,
   type GameState,
   type PublicFixResult,
   type PublicGameState,
+  type PublicPlayer,
   type PublicSegmentResult,
   type RoomView,
   type SegmentResult,
   type ServerMsg,
+  type YourGuess,
 } from "@thefix/engine";
 import { persistEvent } from "../redis.js";
 
@@ -35,6 +40,12 @@ export class Room {
 
   private conns = new Map<Conn, string>();
 
+  // ── guess window (wall clock lives HERE, never in the pure engine) ──
+  /** 30s countdown that injects guessWindowClosed when a guess window is open */
+  private guessTimer: ReturnType<typeof setTimeout> | undefined;
+  /** epoch ms the current window shuts, surfaced to clients for the countdown */
+  private guessDeadline: number | null = null;
+
   constructor(
     readonly code: string,
     readonly fixture: RoomView["fixture"],
@@ -58,6 +69,12 @@ export class Room {
       room.state = reduce(room.state, ev);
       room.log.push(ev);
     }
+    // If the crash happened mid-guess-window, the folded state still has an
+    // open `guessing` block — but the 30s timer that closes it lived only in
+    // the old process's memory, never in the Redis log. Without this, the
+    // segment machine would stay frozen forever. Start a fresh window so it
+    // still closes (and any un-submitted guesses simply expire).
+    if (room.state.guessing) room.startGuessTimer();
     return room;
   }
 
@@ -112,9 +129,73 @@ export class Room {
       }
     }
 
+    // start/stop the 30s guess-window clock as the engine opens/closes it —
+    // done BEFORE broadcasting so the fresh deadline rides out on this view
+    this.syncGuessWindow(prev, next);
+
     const wentLive = prev.status === "lobby" && next.status === "live";
     this.broadcastViews();
     if (wentLive) this.onLive?.();
+  }
+
+  /** Reconcile the wall-clock timer with the engine's guess-window state. */
+  private syncGuessWindow(prev: GameState, next: GameState): void {
+    if (prev.guessing && !next.guessing) {
+      this.clearGuessTimer(); // engine closed it (window done, or game over)
+      return;
+    }
+    if (!prev.guessing && next.guessing) {
+      this.startGuessTimer(); // a fix landed — open the 30s window
+      return;
+    }
+    // still open: if everyone named their fixer, shut it early
+    if (next.guessing?.slots.every((sl) => sl.resolved)) this.closeGuessWindow();
+  }
+
+  private startGuessTimer(): void {
+    this.clearGuessTimer();
+    this.guessDeadline = Date.now() + CONFIG.guessWindowSec * 1000;
+    this.guessTimer = setTimeout(
+      () => this.closeGuessWindow(),
+      CONFIG.guessWindowSec * 1000,
+    );
+    // don't let this pending timer keep the process (or a test runner) alive
+    this.guessTimer.unref?.();
+  }
+
+  /** Inject guessWindowClosed so the engine unfreezes and opens the next
+   *  segment (this event is persisted + replayed like any other). */
+  private closeGuessWindow(): void {
+    this.clearGuessTimer();
+    if (this.state.guessing) {
+      this.apply({ kind: "guessWindowClosed", ts: Date.now() });
+    }
+  }
+
+  private clearGuessTimer(): void {
+    if (this.guessTimer) clearTimeout(this.guessTimer);
+    this.guessTimer = undefined;
+    this.guessDeadline = null;
+  }
+
+  /** This player's open guess window, if a fix landed on them this reveal.
+   *  Carries only what they may see — never the true fixer ids. */
+  private guessFor(playerId: string): YourGuess | null {
+    const g = this.state.guessing;
+    if (!g) return null;
+    const slot = g.slots.find((sl) => sl.victimId === playerId);
+    if (!slot) return null;
+    return {
+      segmentIndex: g.segmentIndex,
+      fixCount: slot.fixerIds.length,
+      needed: guessThreshold(slot.fixerIds.length),
+      candidates: Object.values(this.state.players)
+        .filter((p) => p.id !== playerId)
+        .map(({ id, name, emoji }) => ({ id, name, emoji })),
+      deadline: this.guessDeadline,
+      submitted: slot.resolved,
+      correct: slot.resolved ? slot.correct : null,
+    };
   }
 
   /** Everything THIS player may see. */
@@ -130,6 +211,8 @@ export class Room {
         .map(({ market, side, stake }) => ({ market, side, stake })),
       yourFixTarget:
         s.segment?.fixes.find((f) => f.fixerId === playerId)?.targetId ?? null,
+      guess: this.guessFor(playerId),
+      nextSegment: nextSegmentPreview(s.players[playerId]),
     };
   }
 
@@ -160,21 +243,56 @@ export class Room {
 }
 
 /** Strip per-player secrets from the shared state: bets -> counts, fixes ->
- *  total, and past segments keep landed fixes anonymous until full time. */
+ *  total, past segments keep landed fixes anonymous until full time, and two
+ *  more things vanish that would otherwise out a landed (anonymous) fix — the
+ *  whole `guessing` block (it holds the true fixer ids) and every player's
+ *  carry-over bookkeeping (a +coin bonus would betray who pulled off a job). */
 function redact(s: GameState, viewerId: string): PublicGameState {
   const history: PublicSegmentResult[] =
     s.status === "finished"
       ? s.history
       : s.history.map((r) => redactResult(r, viewerId));
-  if (!s.segment) return { ...s, segment: null, history };
-  const { bets, fixes, ...open } = s.segment;
+  const { guessing: _g, segment, players, history: _h, ...rest } = s;
+  const base = { ...rest, players: publicPlayers(players), history };
+  if (!segment) return { ...base, segment: null };
+  const { bets, fixes, ...open } = segment;
   const betCounts: Record<string, number> = {};
   for (const b of bets) betCounts[b.playerId] = (betCounts[b.playerId] ?? 0) + 1;
-  return {
-    ...s,
-    segment: { ...open, betCounts, fixCount: fixes.length },
-    history,
-  };
+  return { ...base, segment: { ...open, betCounts, fixCount: fixes.length } };
+}
+
+/** Whitelist the fields a player exposes — the private carry-over bookkeeping
+ *  (pendingHalve / pendingCoinBonus / pendingFixLock) is left out, so a landed
+ *  fix's coin reward can't be inferred. Explicit by design: a future secret
+ *  field on Player won't leak by default, it'll fail the PublicPlayer type. */
+function publicPlayers(
+  players: GameState["players"],
+): Record<string, PublicPlayer> {
+  const out: Record<string, PublicPlayer> = {};
+  for (const [id, p] of Object.entries(players)) {
+    out[id] = {
+      id: p.id,
+      name: p.name,
+      emoji: p.emoji,
+      rung: p.rung,
+      coins: p.coins,
+      fixLocked: p.fixLocked,
+    };
+  }
+  return out;
+}
+
+/** Preview of a player's OWN next-segment carry-over for their view (14 / 5 /
+ *  12, and whether they're fix-locked), or null when the plain allowance holds.
+ *  Reads their real (unstripped) pending state — this only goes to that player. */
+function nextSegmentPreview(
+  p: GameState["players"][string] | undefined,
+): RoomView["nextSegment"] {
+  if (!p) return null;
+  if (!p.pendingHalve && p.pendingCoinBonus === 0 && !p.pendingFixLock) {
+    return null;
+  }
+  return nextSegmentAllowance(p);
 }
 
 /** A landed fix is nameless to everyone but its fixer, and its rungs leave

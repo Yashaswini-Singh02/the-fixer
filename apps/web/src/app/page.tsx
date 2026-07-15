@@ -2,11 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import clsx from "clsx";
 import { createRoom, fetchFixtures, type ApiFixture } from "@/lib/api";
 import { FIXTURES, flagEmoji } from "@/lib/fixtures";
 import { isMockMode } from "@/lib/socket";
 import { newRoomCode } from "@/lib/room";
+import { Intro } from "@/components/Intro";
 
 const SIX_DAYS_MS = 6 * 24 * 60 * 60 * 1000;
 
@@ -35,6 +37,7 @@ const MOCK_FIXTURES: ApiFixture[] = FIXTURES.map((f, i) => ({
 
 export default function Landing() {
   const router = useRouter();
+  const [showIntro, setShowIntro] = useState(true);
   const [joinCode, setJoinCode] = useState("");
   const [fixtures, setFixtures] = useState<ApiFixture[] | null>(
     isMockMode() ? MOCK_FIXTURES : null,
@@ -87,9 +90,14 @@ export default function Landing() {
   );
 
   return (
-    <main className="frame flex min-h-dvh flex-col py-8">
-      {/* wordmark hero */}
-      <header className="text-center">
+    <>
+      <AnimatePresence>
+        {showIntro && <Intro onDone={() => setShowIntro(false)} />}
+      </AnimatePresence>
+
+      <main className="frame flex min-h-dvh flex-col py-8">
+        {/* wordmark hero */}
+        <header className="text-center">
         <div className="font-display text-xs uppercase tracking-[0.4em] text-fog">
           A World Cup party game
         </div>
@@ -184,7 +192,8 @@ export default function Landing() {
           </button>
         </div>
       </div>
-    </main>
+      </main>
+    </>
   );
 }
 

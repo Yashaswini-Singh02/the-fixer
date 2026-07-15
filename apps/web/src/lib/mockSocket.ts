@@ -284,6 +284,7 @@ export class MockSocket implements GameSocket {
     this.botBet("bot-priya", "GOAL", "YES", 5); // the cautious favourite-backer
     await wait(500);
     this.botFix("bot-priya", "bot-rahul"); // 🔨 Priya moves on Rahul in secret
+    if (this.me) this.botFix("bot-sam", this.me.playerId); // 🔨 Sam quietly moves on YOU → surfaces (redacted) in Your File
     await this.ramp(0, 70, H1, 620, 5);
     this.botBet("bot-rahul", "CORNERS", "NO", 4);
     await this.ramp(70, 120, H1, 620, 4);

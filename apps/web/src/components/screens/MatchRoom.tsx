@@ -2,12 +2,16 @@
 
 import type { BetSide, MarketKind, RoomView } from "@thefix/engine";
 import { MARKETS } from "@thefix/engine";
+import { AnimatePresence } from "framer-motion";
+import { useState } from "react";
 import { Ladder } from "@/components/Ladder";
 import { MarketCard } from "@/components/MarketCard";
 import { PlayerRail } from "@/components/PlayerRail";
 import { ReactionBar } from "@/components/Reactions";
 import { ScoreStrip } from "@/components/ScoreStrip";
 import { StakeWindow } from "@/components/StakeWindow";
+import { StandingBar } from "@/components/StandingBar";
+import { StatsSheet } from "@/components/StatsSheet";
 
 export function MatchRoom({
   view,
@@ -22,6 +26,7 @@ export function MatchRoom({
 }) {
   const { state } = view;
   const seg = state.segment;
+  const [fileOpen, setFileOpen] = useState(false);
   const players = Object.values(state.players);
   const you = state.players[view.you];
   const coins = you?.coins ?? 0;
@@ -47,6 +52,8 @@ export function MatchRoom({
           live={state.status === "live"}
         />
       </div>
+
+      <StandingBar view={view} onOpen={() => setFileOpen(true)} />
 
       <Ladder
         players={players}
@@ -105,6 +112,12 @@ export function MatchRoom({
       <div className="fixed inset-x-0 bottom-3 z-30 mx-auto flex max-w-[27rem] justify-center px-4">
         <ReactionBar onReact={onReact} />
       </div>
+
+      <AnimatePresence>
+        {fileOpen && (
+          <StatsSheet view={view} onClose={() => setFileOpen(false)} />
+        )}
+      </AnimatePresence>
     </main>
   );
 }

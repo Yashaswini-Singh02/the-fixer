@@ -16,10 +16,6 @@ export type ListedFixture = Fixture & { kind: FixtureKind };
  * index — every fixture that ever appears in the snapshot is persisted, and
  * past matches are offered from that memory for as long as the feed's
  * historical endpoint retains them (kickoff 6h..14d ago).
- *
- * The index MUST outlive process restarts or past matches vanish. In prod that
- * means Redis (Render's disk is ephemeral and wiped on every deploy); in
- * dev/tests, where no Redis is configured, a JSON file on disk.
  */
 export interface FixtureStore {
   /** Load the persisted index (empty on first ever boot). */
@@ -46,7 +42,6 @@ export class DiskFixtureStore implements FixtureStore {
   }
 }
 
-/** Redis-backed store — survives Render's ephemeral disk across deploys. */
 export class RedisFixtureStore implements FixtureStore {
   load(): Promise<Fixture[]> {
     return loadSeenFixtures();
@@ -78,7 +73,6 @@ export class FixtureRegistry {
     })());
   }
 
-  /** Poll the snapshot (throttled to 5 min) and fold new fixtures in. */
   private async refresh(): Promise<void> {
     if (Date.now() - this.lastPoll < SNAPSHOT_TTL_MS) return;
     this.lastPoll = Date.now();
@@ -107,7 +101,6 @@ export class FixtureRegistry {
       }
       if (changed) this.store.save([...this.seen.values()]);
     } catch {
-      /* snapshot flakiness must not take the server down; index stays stale */
     }
   }
 
@@ -116,7 +109,7 @@ export class FixtureRegistry {
     if (age < 0) return "upcoming";
     if (age < HISTORICAL_MIN_AGE_MS) return "live";
     if (age <= HISTORICAL_MAX_AGE_MS) return "past";
-    return null; // fell out of the feed's historical retention
+    return null;
   }
 
   /** Upcoming + live (soonest first), then the newest 3 past matches. */
@@ -137,7 +130,6 @@ export class FixtureRegistry {
     return [...current, ...past];
   }
 
-  /** One fixture with its current kind, or undefined if unknown/expired. */
   async byId(id: string): Promise<ListedFixture | undefined> {
     await this.ensureLoaded();
     await this.refresh();

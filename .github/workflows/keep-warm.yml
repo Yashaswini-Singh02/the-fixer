@@ -1,0 +1,39 @@
+# Keeps the Render free-tier server awake so visitors never hit a ~50s cold
+# start. Render spins the service down after ~15 min idle; this pings it well
+# inside that window. The ping also warms it after a deploy.
+#
+# Target URL: defaults to the known Render URL, but you can override it without
+# touching this file — set a repo *variable* named RENDER_URL
+# (Settings → Secrets and variables → Actions → Variables).
+name: keep-warm
+
+on:
+  schedule:
+    # every 10 minutes. NOTE: GitHub's scheduled runs are best-effort and can be
+    # delayed under load, so this is not a hard guarantee — if the app still goes
+    # cold occasionally, tighten to "*/5 * * * *" or use an uptime monitor.
+    - cron: "*/10 * * * *"
+  # lets you run it by hand from the Actions tab to test / warm on demand
+  workflow_dispatch:
+
+# never let two pings pile up; a slow cold-boot ping shouldn't stack
+concurrency:
+  group: keep-warm
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping the room server
+        env:
+          URL: ${{ vars.RENDER_URL || 'https://the-fixer.onrender.com' }}
+        run: |
+          echo "Pinging $URL/api/fixtures"
+          # --max-time 120: survive a full cold boot (~50s) with headroom
+          # --retry 2 --retry-all-errors: a single warmup blip (e.g. 502) retries
+          curl -fsS --max-time 120 \
+               --retry 2 --retry-all-errors --retry-delay 15 \
+               -o /dev/null -w "HTTP %{http_code} in %{time_total}s\n" \
+               "$URL/api/fixtures"

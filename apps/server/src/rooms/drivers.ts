@@ -4,11 +4,6 @@ import { sseStream } from "../sse.js";
 import { authedFetch } from "../txline/auth.js";
 import type { Room } from "./room.js";
 
-/**
- * Drivers feed normalized match events into a room. The room can't tell
- * which one is attached — historical and live produce the same stream (the
- * PRD's one-code-path rule).
- */
 
 /**
  * Fetch a past match's full scores history from TxLINE. Available for
@@ -59,8 +54,6 @@ export function driveLive(
 ): void {
   const normalizer = new Normalizer(room.fixture.id);
 
-  // function call, not property access — apply() mutates room.state and
-  // TypeScript's narrowing must not cache the status across it
   const finished = () => room.state.status === "finished";
 
   const follow = async (stream: "scores" | "odds") => {

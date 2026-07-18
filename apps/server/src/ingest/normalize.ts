@@ -31,17 +31,7 @@ const zero = (): MatchCounts => ({
   reds: { home: 0, away: 0 },
 });
 
-/**
- * Stateful per-fixture normalizer: raw TxLINE records in, normalized
- * StreamEvents out.
- *
- * Fact events (goal/corner/card) are derived from the CUMULATIVE `Score`
- * object, not from raw actions: the feed carries provisional actions, VAR
- * amends and discards (a 3-goal match showed 9 raw `goal` actions), while
- * the cumulative counters are authoritative. We emit one event per counter
- * increment and absorb downward corrections silently — resolution at segment
- * boundaries always reads true counts.
- */
+
 const PHASE_ORDER: MatchPhase[] = [
   "PRE",
   "H1",
@@ -72,13 +62,9 @@ export class Normalizer {
     };
   }
 
-  /** One raw scores-feed record -> zero or more normalized events. */
   scores(raw: any): StreamEvent[] {
     if (String(raw.FixtureId) !== this.fixtureId) return [];
 
-    // the feed multiplexes redundant upstream connections; one can lag.
-    // Seq is the feed's own ordering — drop stale/duplicate records
-    // (also dedupes Last-Event-ID replays on live reconnects)
     if (typeof raw.Seq === "number") {
       if (raw.Seq <= this.lastRawSeq) return [];
       this.lastRawSeq = raw.Seq;
@@ -112,9 +98,7 @@ export class Normalizer {
       out.push(...this.reconcile(target, ts, clockSec));
     }
 
-    // clock ticks pace the game engine (stake-window seal, segment close):
-    // emit on adjustments and roughly every 15s of clock movement — the feed's
-    // constant possession chatter gives us plenty of carriers
+
     if (
       clockSec != null &&
       (raw.Action === "clock_adjustment" ||
@@ -127,7 +111,6 @@ export class Normalizer {
     return out;
   }
 
-  /** Emit one fact event per counter increment; adopt corrections silently. */
   private reconcile(
     target: MatchCounts,
     ts: number,

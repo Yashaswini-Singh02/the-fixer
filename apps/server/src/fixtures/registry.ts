@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { RoomView } from "@thefix/engine";
+import { loadSeenFixtures, persistSeenFixtures } from "../redis.js";
 import { authedFetch } from "../txline/auth.js";
 
 type Fixture = RoomView["fixture"];
@@ -12,10 +13,50 @@ export type ListedFixture = Fixture & { kind: FixtureKind };
  * TxLINE has no "past fixtures" listing: the snapshot is a rolling window
  * that forgets a match within a day or two of kickoff, and the historical
  * scores payload carries participant IDs but no names. So we build our own
- * index — every fixture that ever appears in the snapshot is persisted to
- * disk, and past matches are offered from that memory for as long as the
- * feed's historical endpoint retains them (kickoff 6h..14d ago).
+ * index — every fixture that ever appears in the snapshot is persisted, and
+ * past matches are offered from that memory for as long as the feed's
+ * historical endpoint retains them (kickoff 6h..14d ago).
+ *
+ * The index MUST outlive process restarts or past matches vanish. In prod that
+ * means Redis (Render's disk is ephemeral and wiped on every deploy); in
+ * dev/tests, where no Redis is configured, a JSON file on disk.
  */
+export interface FixtureStore {
+  /** Load the persisted index (empty on first ever boot). */
+  load(): Promise<Fixture[]>;
+  /** Persist the complete index. Fire-and-forget: never stalls a poll. */
+  save(fixtures: Fixture[]): void;
+}
+
+/** JSON-file store — dev/tests, where no Redis is configured. */
+export class DiskFixtureStore implements FixtureStore {
+  constructor(private readonly file: string) {}
+
+  async load(): Promise<Fixture[]> {
+    try {
+      return JSON.parse(readFileSync(this.file, "utf8")) as Fixture[];
+    } catch {
+      return []; // first boot — the index fills as the snapshot is polled
+    }
+  }
+
+  save(fixtures: Fixture[]): void {
+    mkdirSync(dirname(this.file), { recursive: true });
+    writeFileSync(this.file, JSON.stringify(fixtures, null, 1));
+  }
+}
+
+/** Redis-backed store — survives Render's ephemeral disk across deploys. */
+export class RedisFixtureStore implements FixtureStore {
+  load(): Promise<Fixture[]> {
+    return loadSeenFixtures();
+  }
+
+  save(fixtures: Fixture[]): void {
+    persistSeenFixtures(fixtures);
+  }
+}
+
 const HISTORICAL_MIN_AGE_MS = 6 * 3_600_000;
 const HISTORICAL_MAX_AGE_MS = 14 * 24 * 3_600_000;
 const SNAPSHOT_TTL_MS = 5 * 60_000;
@@ -23,22 +64,18 @@ const SNAPSHOT_TTL_MS = 5 * 60_000;
 export class FixtureRegistry {
   private seen = new Map<string, Fixture>();
   private lastPoll = 0;
+  private loaded?: Promise<void>;
 
   constructor(
     private readonly origin: string,
-    private readonly file: string,
-  ) {
-    try {
-      const rows = JSON.parse(readFileSync(file, "utf8")) as Fixture[];
-      for (const f of rows) this.seen.set(f.id, f);
-    } catch {
-      /* first boot — the index fills as the snapshot is polled */
-    }
-  }
+    private readonly store: FixtureStore,
+  ) {}
 
-  private persist(): void {
-    mkdirSync(dirname(this.file), { recursive: true });
-    writeFileSync(this.file, JSON.stringify([...this.seen.values()], null, 1));
+  /** Hydrate the in-memory index from the durable store, exactly once. */
+  private ensureLoaded(): Promise<void> {
+    return (this.loaded ??= (async () => {
+      for (const f of await this.store.load()) this.seen.set(f.id, f);
+    })());
   }
 
   /** Poll the snapshot (throttled to 5 min) and fold new fixtures in. */
@@ -68,7 +105,7 @@ export class FixtureRegistry {
           changed = true;
         }
       }
-      if (changed) this.persist();
+      if (changed) this.store.save([...this.seen.values()]);
     } catch {
       /* snapshot flakiness must not take the server down; index stays stale */
     }
@@ -84,6 +121,7 @@ export class FixtureRegistry {
 
   /** Upcoming + live (soonest first), then the newest 3 past matches. */
   async list(): Promise<ListedFixture[]> {
+    await this.ensureLoaded();
     await this.refresh();
     const now = Date.now();
     const all = [...this.seen.values()]
@@ -101,6 +139,7 @@ export class FixtureRegistry {
 
   /** One fixture with its current kind, or undefined if unknown/expired. */
   async byId(id: string): Promise<ListedFixture | undefined> {
+    await this.ensureLoaded();
     await this.refresh();
     const f = this.seen.get(id);
     if (!f) return undefined;

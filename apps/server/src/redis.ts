@@ -13,6 +13,7 @@ import type { EngineEvent, RoomView } from "@thefix/engine";
 const ROOMS_KEY = "thefix:rooms"; // SET of live room codes
 const logKey = (code: string) => `thefix:room:${code}:log`; // LIST of events
 const fixtureKey = (code: string) => `thefix:room:${code}:fixture`; // JSON string
+const SEEN_KEY = "thefix:fixtures:seen"; // JSON string: the whole fixture index
 
 /** The fixture half of a room — teams, kickoff — that the event log omits. */
 type RoomFixture = RoomView["fixture"];
@@ -110,5 +111,36 @@ export async function loadRoomFixture(
   } catch (err) {
     console.error(`[redis] loadRoomFixture ${code}:`, (err as Error).message);
     return null;
+  }
+}
+
+/**
+ * The fixture index — every match the snapshot has ever shown us — kept as one
+ * JSON string so it survives deploys (Render's disk does not). This is the
+ * durable memory that lets us still offer a past match by name after TxLINE's
+ * snapshot has forgotten it and its historical endpoint carries no names.
+ *
+ * The registry holds the authoritative set in memory and always writes the
+ * complete snapshot, so it's a single writer — a plain SET can't race. Not
+ * awaited, matching the rest of this module: a slow Redis never stalls a poll.
+ */
+export function persistSeenFixtures(fixtures: RoomFixture[]): void {
+  if (!client) return;
+  client
+    .set(SEEN_KEY, JSON.stringify(fixtures))
+    .catch((err) =>
+      console.error("[redis] persist seen fixtures:", err.message),
+    );
+}
+
+/** The persisted fixture index, or [] if none has been stored yet. */
+export async function loadSeenFixtures(): Promise<RoomFixture[]> {
+  if (!client) return [];
+  try {
+    const raw = await client.get(SEEN_KEY);
+    return raw ? (JSON.parse(raw) as RoomFixture[]) : [];
+  } catch (err) {
+    console.error("[redis] loadSeenFixtures:", (err as Error).message);
+    return [];
   }
 }

@@ -7,7 +7,11 @@ import {
   SERVER_PORT,
   type ClientMsg,
 } from "@thefix/engine";
-import { FixtureRegistry } from "./fixtures/registry.js";
+import {
+  DiskFixtureStore,
+  FixtureRegistry,
+  RedisFixtureStore,
+} from "./fixtures/registry.js";
 import {
   driveLive,
   fetchHistoricalScores,
@@ -35,11 +39,13 @@ for (const p of [".env", "../../.env"]) {
 const API_ORIGIN =
   process.env.TXLINE_API_ORIGIN ?? "https://txline-dev.txodds.com";
 
-// every fixture the snapshot ever shows us, persisted across restarts —
-// this is what lets us offer past matches the feed no longer lists
 const registry = new FixtureRegistry(
   API_ORIGIN,
-  fileURLToPath(new URL("../data/fixtures-seen.json", import.meta.url)),
+  process.env.REDIS_URL
+    ? new RedisFixtureStore()
+    : new DiskFixtureStore(
+        fileURLToPath(new URL("../data/fixtures-seen.json", import.meta.url)),
+      ),
 );
 
 // ── the server ──────────────────────────────────────────────────────

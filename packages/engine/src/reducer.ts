@@ -25,9 +25,13 @@ const zeroCounts = (): MatchCounts => ({
   reds: { home: 0, away: 0 },
 });
 
-export function initGame(fixtureId: string): GameState {
+export function initGame(
+  fixtureId: string,
+  stakeWindowSec: number = CONFIG.stakeWindowSec,
+): GameState {
   return {
     fixtureId,
+    stakeWindowSec,
     status: "lobby",
     organizerId: null,
     players: {},
@@ -284,7 +288,7 @@ function advanceSegments(s: GameState): void {
     const seg = s.segment;
 
     if (seg) {
-      if (!seg.sealed && s.clockSec >= seg.openClock + CONFIG.stakeWindowSec) {
+      if (!seg.sealed && s.clockSec >= seg.openClock + s.stakeWindowSec) {
         seg.sealed = true;
       }
       if (shouldClose(s, seg)) {

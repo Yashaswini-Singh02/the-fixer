@@ -49,8 +49,9 @@ export class Room {
   constructor(
     readonly code: string,
     readonly fixture: RoomView["fixture"],
+    stakeWindowSec?: number,
   ) {
-    this.state = initGame(fixture.id);
+    this.state = initGame(fixture.id, stakeWindowSec);
   }
 
   /**

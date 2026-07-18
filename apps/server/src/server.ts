@@ -39,6 +39,8 @@ for (const p of [".env", "../../.env"]) {
 const API_ORIGIN =
   process.env.TXLINE_API_ORIGIN ?? "https://txline-dev.txodds.com";
 
+const REPLAY_STAKE_WINDOW_SEC = 300;
+
 const registry = new FixtureRegistry(
   API_ORIGIN,
   process.env.REDIS_URL
@@ -75,7 +77,13 @@ app.post("/api/rooms", async (req, reply) => {
   if (!listed) return reply.code(404).send({ error: "unknown fixtureId" });
   const { kind, ...fixture } = listed;
 
-  const room = new Room(makeCode(), fixture);
+  // past matches replay compressed at speed; a wider stake window keeps betting
+  // playable rather than a blur. Live matches keep CONFIG's default (undefined).
+  const room = new Room(
+    makeCode(),
+    fixture,
+    kind === "past" ? REPLAY_STAKE_WINDOW_SEC : undefined,
+  );
   // stash the fixture now so a boot rebuild has the teams/kickoff the event
   // log doesn't carry (the log's first event lands a moment later on hello)
   persistRoomFixture(room.code, fixture);
@@ -94,9 +102,9 @@ app.post("/api/rooms", async (req, reply) => {
     // the history spans days of pre-match chatter that normalizes to nothing;
     // start the tape shortly before kickoff so START leads straight into H1
     items = items.filter((i) => i.ts >= fixture.kickoff - 10 * 60_000);
-    // don't start the match until the organizer presses START —
-    // 20x compresses a two-hour match into ~6 minutes of party
-    const speed = Math.min(Math.max(Number(body.speed) || 20, 1), 100_000);
+    // don't start the match until the organizer presses START — 10x plays a
+    // full match in ~9 min;
+    const speed = Math.min(Math.max(Number(body.speed) || 10, 1), 100_000);
     room.onLive = () =>
       void replayInto(room, items, speed).catch((err) =>
         console.error(`room ${room.code} historical replay died:`, err),

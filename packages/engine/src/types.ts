@@ -108,6 +108,7 @@ export interface OddsSummary {
 
 export interface GameState {
   fixtureId: string;
+  stakeWindowSec: number;
   status: GameStatus;
   organizerId: string | null;
   players: Record<string, Player>;

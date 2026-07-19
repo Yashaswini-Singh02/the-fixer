@@ -268,7 +268,7 @@ function FixtureRow({
       onClick={onCreate}
       disabled={busy}
       className={clsx(
-        "slip flex w-full items-center gap-3 p-3 text-left transition-colors active:bg-pitch-3",
+        "group slip flex w-full items-center gap-3 p-3 text-left transition-colors active:bg-pitch-3",
         busy && "opacity-50",
       )}
     >
@@ -277,13 +277,17 @@ function FixtureRow({
         {fixture.home} v {fixture.away}
       </span>
       <span className="text-xl">{flagEmoji(fixture.away)}</span>
-      <span className="ml-1 shrink-0 text-[11px] tabular-nums text-fog">
-        {busy
-          ? "…"
-          : fixture.kind === "past"
-            ? "replay"
-            : kickoff(fixture.kickoff)}
-      </span>
+      {busy ? (
+        <span className="ml-1 shrink-0 text-[11px] tabular-nums text-fog">…</span>
+      ) : fixture.kind === "past" ? (
+        <span className="ml-1 flex shrink-0 items-center gap-1 rounded-full bg-gold/15 px-3 py-1.5 font-display text-[11px] uppercase tracking-wide text-gold transition-colors group-active:bg-gold/25">
+          ▶ Replay
+        </span>
+      ) : (
+        <span className="ml-1 shrink-0 text-[11px] tabular-nums text-fog">
+          {kickoff(fixture.kickoff)}
+        </span>
+      )}
     </button>
   );
 }

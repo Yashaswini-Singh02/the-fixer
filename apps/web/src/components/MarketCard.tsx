@@ -31,11 +31,10 @@ export function MarketCard({
 
   // re-betting this market refunds the old stake, so it's spendable again
   const maxStake = coins + (yourBet?.stake ?? 0);
-  const chips: (number | "MAX")[] = [1, 2, 5, "MAX"];
+  const chips = [1, 2, 5];
 
-  const place = (chip: number | "MAX") => {
+  const place = (stake: number) => {
     if (!side || sealed) return;
-    const stake = chip === "MAX" ? maxStake : chip;
     if (stake < 1 || stake > maxStake) return;
     onBet(side, stake);
   };
@@ -79,21 +78,18 @@ export function MarketCard({
       {/* stake chips — appear once a side is chosen */}
       <div
         className={clsx(
-          "grid grid-cols-4 gap-2 overflow-hidden transition-all duration-300",
+          "grid grid-cols-3 gap-2 overflow-hidden transition-all duration-300",
           side && !sealed ? "mt-2 max-h-16 opacity-100" : "max-h-0 opacity-0",
         )}
       >
-        {chips.map((chip) => {
-          const stake = chip === "MAX" ? maxStake : chip;
+        {chips.map((stake) => {
           const disabled = stake < 1 || stake > maxStake;
-          const isCurrent =
-            yourBet?.side === side &&
-            (chip === "MAX" ? maxStake : chip) === yourBet?.stake;
+          const isCurrent = yourBet?.side === side && stake === yourBet?.stake;
           return (
             <button
-              key={String(chip)}
+              key={stake}
               disabled={disabled}
-              onClick={() => place(chip)}
+              onClick={() => place(stake)}
               className={clsx(
                 "rounded-xl py-2 text-sm font-semibold tabular-nums transition-colors",
                 isCurrent
@@ -102,7 +98,7 @@ export function MarketCard({
                 disabled && "opacity-25",
               )}
             >
-              {chip === "MAX" ? "ALL" : chip}
+              {stake}
             </button>
           );
         })}

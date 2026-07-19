@@ -89,7 +89,7 @@ export function PlayerRail({
               onPointerLeave={cancelHold}
               onPointerCancel={cancelHold}
               onContextMenu={(e) => e.preventDefault()}
-              className="relative flex w-16 shrink-0 select-none flex-col items-center gap-1"
+              className="relative flex w-16 shrink-0 pt-2 select-none flex-col items-center gap-1"
               style={{ touchAction: "none" }}
             >
               {/* hold-to-fix progress ring */}

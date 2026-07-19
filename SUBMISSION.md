@@ -21,7 +21,7 @@ The signature mechanic — **"fixing" a friend** — lets a player secretly sabo
 - **Live TxLINE data as input:** goals, corners, cards, the clock, and odds all arrive from TxLINE score/odds streams. Replays pull the same match's archive. Nothing is mocked in production.
 - **Solana signup:** the service is activated by a real on-chain subscription transaction to the TxLINE `txoracle` program, signed by a Solana wallet.
 - **Live & functional, not a mockup:** deployed web app + room server, both reachable now. Prod runs `NEXT_PUBLIC_MOCK=0` against real data.
-- **Reviewable without a live match:** because past matches replay from the archive at up to 20×, judges can start a finished match and watch the full live experience on demand — important since matches end before review.
+- **Reviewable without a live match:** because past matches replay from the archive at up to 10×, judges can start a finished match and watch the full live experience on demand — important since matches end before review.
 
 ## Technical highlights
 

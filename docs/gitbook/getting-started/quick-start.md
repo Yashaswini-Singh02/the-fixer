@@ -30,7 +30,7 @@ Then pick your name and emoji, and you're in the lobby waiting for kick-off.
 
 ## Choosing what to play
 
-<table><thead><tr><th width="180">You want to play…</th><th>Pick this</th><th>What happens</th></tr></thead><tbody><tr><td>Right now, a real live match</td><td>A fixture under <strong>Live</strong></td><td>Segments open in real time as the match plays out on your TV.</td></tr><tr><td>A game later today / this week</td><td>A fixture under <strong>Coming up</strong></td><td>Create the room early; it waits in the lobby until kick-off.</td></tr><tr><td>Any time, no live match on</td><td>A match under <strong>Replay the latest matches</strong></td><td>A recent real match replays at <strong>20× speed</strong> — a full game in ~6 minutes.</td></tr></tbody></table>
+<table><thead><tr><th width="180">You want to play…</th><th>Pick this</th><th>What happens</th></tr></thead><tbody><tr><td>Right now, a real live match</td><td>A fixture under <strong>Live</strong></td><td>Segments open in real time as the match plays out on your TV.</td></tr><tr><td>A game later today / this week</td><td>A fixture under <strong>Coming up</strong></td><td>Create the room early; it waits in the lobby until kick-off.</td></tr><tr><td>Any time, no live match on</td><td>A match under <strong>Replay the latest matches</strong></td><td>A recent real match replays at <strong>10× speed</strong> — a full game in ~9 minutes.</td></tr></tbody></table>
 
 ## Your first segment (what to expect)
 

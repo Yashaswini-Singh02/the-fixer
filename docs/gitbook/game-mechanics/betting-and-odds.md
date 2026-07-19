@@ -23,7 +23,7 @@ Every bet is **secret**. While a segment is live, your friends can see _how many
 You can only bet during the **stake window** — a fixed slice of match time from the moment the segment opens. When it closes, the cards stamp **SEALED** and no more bets (or fixes) go through.
 
 {% hint style="info" %}
-The stake window is **180 seconds of match time**, not wall-clock time. At real speed that's three comfortable minutes. In a 20× replay it's only about **9 real seconds**, so bet quickly. A bet sent after the seal simply doesn't count.
+The stake window is **180 seconds of match time**, not wall-clock time. At real speed that's three comfortable minutes. In a 10× replay it's only about **18 real seconds**, so bet quickly. A bet sent after the seal simply doesn't count.
 {% endhint %}
 
 ## Live odds

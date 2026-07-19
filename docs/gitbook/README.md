@@ -19,7 +19,7 @@ The game chops the match into **15-minute segments**. In every segment you get a
 The twist that gives the game its name: at any moment you can spend 2 coins to secretly **fix a friend**. If they have a bad segment, your sabotage pays off and _nobody knows it was you_ — until full time, when every fix is confessed.
 
 {% hint style="info" %}
-The match data is **real**. Live games stream in as they happen; past games replay from the archive at up to 20× speed, so a two-hour match becomes a ~6-minute party round.
+The match data is **real**. Live games stream in as they happen; past games replay from the archive at up to 10× speed, so a full match becomes a ~9-minute party round.
 {% endhint %}
 
 ## The 60-second pitch

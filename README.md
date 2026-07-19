@@ -15,7 +15,7 @@ The match is chopped into **15-minute segments**. Each segment you get fresh coi
 
 The twist that names the game: at any moment you can spend 2 coins to secretly **fix a friend**. Their bad segment becomes your good one — and nobody knows it was you until full time, when every fix is confessed.
 
-Past matches replay from the TxLINE archive at up to 20× speed, so a two-hour match becomes a ~6-minute party round — which also means **judges can replay a finished match on demand**, even with no live game in progress.
+Past matches replay from the TxLINE archive at up to 10× speed, so a full match becomes a ~9-minute party round — which also means **judges can replay a finished match on demand**, even with no live game in progress.
 
 ## Built on TxLINE + Solana
 

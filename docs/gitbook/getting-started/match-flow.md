@@ -21,7 +21,7 @@ Then the next segment opens and it starts again. **Unspent coins vanish** at eac
 * **Half time / full time** — the match's own phases; the game follows the real whistle, not a fixed clock.
 
 {% hint style="info" %}
-Segments follow the **match clock**, not your wall clock. In a 20× replay a 15-minute segment is over in about 45 seconds, and the stake window is only a few seconds — bet fast.
+Segments follow the **match clock**, not your wall clock. In a 10× replay a 15-minute segment is over in about 90 seconds, and the stake window is only a few seconds — bet fast.
 {% endhint %}
 
 ## The reveal — the loudest moment

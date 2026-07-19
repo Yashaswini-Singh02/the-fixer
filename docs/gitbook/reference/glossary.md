@@ -26,7 +26,7 @@ description: Every term in THE FIXER, defined in one place.
 <tr><td><strong>Miss at most one</strong></td><td>The guess-window threshold: you clear the guess as long as you correctly name all but one of your fixers.</td></tr>
 <tr><td><strong>Payout</strong></td><td>The odds multiplier on a market side (e.g. 2.5×). Fair odds — no house margin — capped at 6.0×.</td></tr>
 <tr><td><strong>Red card</strong></td><td>A real-match event that slides everyone above rung 10 down 1 rung.</td></tr>
-<tr><td><strong>Replay</strong></td><td>A finished real match re-run at speed (default 20×) so it can be played any time.</td></tr>
+<tr><td><strong>Replay</strong></td><td>A finished real match re-run at speed (default 10×) so it can be played any time.</td></tr>
 <tr><td><strong>Reveal</strong></td><td>The full-screen takeover at the end of a segment: outcomes land, bets unseal, fixes resolve, the ladder climbs.</td></tr>
 <tr><td><strong>Room</strong></td><td>A single game session, joined via a 4-letter code or link. 2–8 players.</td></tr>
 <tr><td><strong>Rung</strong></td><td>One step on the 20-step ladder.</td></tr>

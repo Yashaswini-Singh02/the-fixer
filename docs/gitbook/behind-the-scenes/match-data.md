@@ -10,7 +10,7 @@ Nothing in THE FIXER is faked. Goals, corners, cards, the clock, half time, red 
 
 <table><thead><tr><th width="160">Mode</th><th>Source</th><th>What it feels like</th></tr></thead><tbody>
 <tr><td><strong>Live</strong></td><td>Live score &#38; odds streams</td><td>Segments open in real time as the match plays out. Odds shift segment to segment.</td></tr>
-<tr><td><strong>Replay</strong></td><td>The match's archived history</td><td>A finished match re-run at speed (default 20×). Fast-forwards to just before kick-off so there's no dead air.</td></tr>
+<tr><td><strong>Replay</strong></td><td>The match's archived history</td><td>A finished match re-run at speed (default 10×). Fast-forwards to just before kick-off so there's no dead air.</td></tr>
 </tbody></table>
 
 Both feed the **same pipeline**: raw feed → normalizer → engine events → game state. The engine can't tell them apart (see [How It's Built](architecture.md)). For the exact endpoints behind each mode, see [Powered by TxLINE](txline.md).
@@ -20,7 +20,7 @@ Both feed the **same pipeline**: raw feed → normalizer → engine events → g
 Replays run at a configurable speed. Because the stake window is measured in **match time**, speed directly controls how long you get to bet:
 
 <table><thead><tr><th width="140">Speed</th><th width="200">Stake window (real time)</th><th>Good for</th></tr></thead><tbody>
-<tr><td><strong>20×</strong> (default)</td><td>~9 seconds</td><td>A fast party round — a full match in ~6 minutes.</td></tr>
+<tr><td><strong>10×</strong> (default)</td><td>~18 seconds</td><td>A fast party round — a full match in ~9 minutes.</td></tr>
 <tr><td><strong>2–4×</strong></td><td>45–90 seconds</td><td>A relaxed game with time to think about every bet.</td></tr>
 <tr><td><strong>Live (1×)</strong></td><td>3 minutes</td><td>Watching a real match unfold.</td></tr>
 </tbody></table>
@@ -43,4 +43,4 @@ A few honest limitations, worth knowing so nothing looks broken:
 
 ## Why segments follow the match clock
 
-Everything in the game — when a segment opens, how long the stake window lasts, when the reveal fires — is driven by the **match clock**, not real-world seconds. This is the single decision that lets one match play at real speed for a live game and at 20× for a party without changing any rules. The match is the metronome.
+Everything in the game — when a segment opens, how long the stake window lasts, when the reveal fires — is driven by the **match clock**, not real-world seconds. This is the single decision that lets one match play at real speed for a live game and at 10× for a party without changing any rules. The match is the metronome.

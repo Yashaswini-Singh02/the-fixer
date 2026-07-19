@@ -70,7 +70,7 @@ The whole ruleset in tables. For the "why," follow the links into [Game Mechanic
 ## Replay speed
 
 <table><thead><tr><th width="280">Setting</th><th>Effect</th></tr></thead><tbody>
-<tr><td>Default replay speed</td><td>20× (a ~2-hour match in ~6 minutes; ~9-second stake windows)</td></tr>
+<tr><td>Default replay speed</td><td>10× (a full match in ~9 minutes; ~18-second stake windows)</td></tr>
 <tr><td>Slower (2–4×)</td><td>45–90-second stake windows — best for a relaxed UX test</td></tr>
 <tr><td>Live match</td><td>Real time — three-minute stake windows</td></tr>
 </tbody></table>

@@ -13,7 +13,7 @@ Nothing in THE FIXER is faked. Goals, corners, cards, the clock, half time, red 
 <tr><td><strong>Replay</strong></td><td>The match's archived history</td><td>A finished match re-run at speed (default 20×). Fast-forwards to just before kick-off so there's no dead air.</td></tr>
 </tbody></table>
 
-Both feed the **same pipeline**: raw feed → normalizer → engine events → game state. The engine can't tell them apart (see [How It's Built](architecture.md)).
+Both feed the **same pipeline**: raw feed → normalizer → engine events → game state. The engine can't tell them apart (see [How It's Built](architecture.md)). For the exact endpoints behind each mode, see [Powered by TxLINE](txline.md).
 
 ## Replay speed
 
